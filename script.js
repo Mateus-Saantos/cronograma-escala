@@ -7,6 +7,7 @@ const weekdayLabels = ["D","S","T","Q","Q","S","S"];
 
 const OVERRIDES_STORAGE_KEY = 'escala-overrides-2026';
 const CONFIG_STORAGE_KEY = 'escala-config-v1';
+const CLOUD_ID_STORAGE_KEY = 'escala-cloud-id';
 
 const DEFAULT_CONFIG = {
   nome: '',
@@ -128,15 +129,57 @@ function saveOverrides(overrides){
   }
 }
 
-/* ---------- Compartilhamento por URL ---------- */
+/* ---------- Persistência: ID do cronograma na nuvem ----------
+   Uma vez que o usuário compartilha pela primeira vez, guardamos
+   esse ID localmente. Todo salvamento seguinte atualiza o MESMO
+   documento no Firestore — o link não muda depois de gerado. */
+
+function getCloudId(){
+  return localStorage.getItem(CLOUD_ID_STORAGE_KEY);
+}
+
+function setCloudId(id){
+  localStorage.setItem(CLOUD_ID_STORAGE_KEY, id);
+}
+
+/* ---------- Ponte com o firebase.js ----------
+   firebase.js expõe window.firebaseCronograma. Se por algum motivo
+   ele não carregou (offline, erro de rede, etc.), a aplicação
+   continua funcionando 100% local — só a parte "nuvem" fica indisponível. */
+
+function cloudDisponivel(){
+  return typeof window.firebaseCronograma !== 'undefined';
+}
+
+/* Envia a config + overrides atuais pro Firestore, reaproveitando o
+   mesmo ID já existente. Não faz nada se o usuário ainda não tiver
+   compartilhado nenhuma vez (não existe ID ainda). */
+async function syncToCloud(){
+  const cloudId = getCloudId();
+  if(!cloudId) return; // nada compartilhado ainda, não há o que sincronizar
+  if(!cloudDisponivel()){
+    console.warn('Firebase indisponível — alteração ficou salva só localmente.');
+    return;
+  }
+  try{
+    await window.firebaseCronograma.salvarCronograma(
+      { config: currentConfig, overrides: loadOverrides() },
+      cloudId
+    );
+  }catch(e){
+    console.error('Erro ao sincronizar com a nuvem:', e);
+  }
+}
+
+/* ---------- Compartilhamento por URL (formato antigo, com parâmetros) ----------
+   Mantido só para não quebrar links já compartilhados antes da versão
+   com Firebase. Links novos usam ?id=XXXXXX (ver seção Firebase acima). */
 
 function parseSharedConfigFromURL(){
   const params = new URLSearchParams(window.location.search);
   if(!params.has('escala')) return null;
 
   const tipo = params.get('escala');
-  // Links antigos podem trazer "invertida" na URL — ignoramos esse parâmetro
-  // de propósito para não quebrar links já compartilhados.
   const cfg = {
     nome: params.get('nome') || '',
     tipo: ['12x36', '5x2', 'personalizada'].includes(tipo) ? tipo : '12x36',
@@ -150,20 +193,6 @@ function parseSharedConfigFromURL(){
   return cfg;
 }
 
-function buildShareURL(config){
-  const params = new URLSearchParams();
-  params.set('nome', config.nome || '');
-  params.set('escala', config.tipo);
-  params.set('data', config.referenceDate);
-  params.set('estado', config.referenceStatus);
-  if(config.tipo === 'personalizada'){
-    params.set('wdias', config.custom.trabalho);
-    params.set('fdias', config.custom.folga);
-  }
-  const base = window.location.origin + window.location.pathname;
-  return `${base}?${params.toString()}`;
-}
-
 function cleanURL(){
   window.history.replaceState(null, '', window.location.pathname);
 }
@@ -174,6 +203,8 @@ function cleanURL(){
 
 let currentConfig = loadConfig();
 let pendingSharedConfig = null;
+let pendingSharedOverrides = null;
+let pendingSharedId = null;
 
 const now = new Date();
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -303,35 +334,33 @@ yearToday.addEventListener('click', () => setDisplayYear(REAL_CURRENT_YEAR));
 /* =========================================================
    Botão flutuante: voltar pro dia atual
    ========================================================= */
- 
+
 const backToTodayBtn = document.getElementById('backToTodayBtn');
 let todayObserver = null;
- 
+
 function setupBackToTodayWatcher(){
   if(todayObserver) todayObserver.disconnect();
- 
-  // Se o ano exibido não é o ano real, não existe "hoje" na tela —
-  // o botão fica sempre visível, e clicar nele volta pro ano E rola até o dia.
+
   if(displayYear !== REAL_CURRENT_YEAR){
     backToTodayBtn.classList.add('show');
     return;
   }
- 
+
   const elementoHoje = document.querySelector('.day.today');
   if(!elementoHoje){
     backToTodayBtn.classList.remove('show');
     return;
   }
- 
+
   todayObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       backToTodayBtn.classList.toggle('show', !entry.isIntersecting);
     });
   }, { threshold: 0.4 });
- 
+
   todayObserver.observe(elementoHoje);
 }
- 
+
 backToTodayBtn.addEventListener('click', () => {
   if(displayYear !== REAL_CURRENT_YEAR){
     setDisplayYear(REAL_CURRENT_YEAR);
@@ -399,6 +428,7 @@ modalSave.addEventListener('click', () => {
   saveOverrides(overrides);
   closeDayModal();
   render();
+  syncToCloud();
 });
 
 modalReset.addEventListener('click', () => {
@@ -408,6 +438,7 @@ modalReset.addEventListener('click', () => {
   saveOverrides(overrides);
   closeDayModal();
   render();
+  syncToCloud();
 });
 
 /* =========================================================
@@ -478,24 +509,42 @@ settingsSave.addEventListener('click', () => {
   closeSettings();
   render();
   showToast('Configurações salvas!');
+  syncToCloud();
 });
 
 /* =========================================================
-   Compartilhar escala
+   Compartilhar escala (Firestore — mesmo ID sempre)
    ========================================================= */
 
 async function shareSchedule(){
-  const url = buildShareURL(currentConfig);
+  if(!cloudDisponivel()){
+    showToast('Recurso online indisponível agora');
+    return;
+  }
+
+  showToast('Gerando link...');
   try{
-    await navigator.clipboard.writeText(url);
-    showToast('Link copiado!');
+    const cloudId = await window.firebaseCronograma.salvarCronograma(
+      { config: currentConfig, overrides: loadOverrides() },
+      getCloudId() // reaproveita o ID se já existir; se não, o firebase.js gera um novo
+    );
+    setCloudId(cloudId);
+
+    const url = `${window.location.origin}${window.location.pathname}?id=${cloudId}`;
+    try{
+      await navigator.clipboard.writeText(url);
+      showToast('Link copiado!');
+    }catch(e){
+      window.prompt('Copie o link da sua escala:', url);
+    }
   }catch(e){
-    window.prompt('Copie o link da sua escala:', url);
+    console.error('Erro ao gerar link de compartilhamento:', e);
+    showToast('Erro ao gerar link');
   }
 }
 
 /* =========================================================
-   Conflito: config local existente vs link compartilhado
+   Conflito: cronograma local existente vs link compartilhado
    ========================================================= */
 
 const conflictOverlay = document.getElementById('conflictOverlay');
@@ -505,6 +554,8 @@ const conflictLoad = document.getElementById('conflictLoad');
 conflictKeep.addEventListener('click', () => {
   conflictOverlay.classList.remove('open');
   pendingSharedConfig = null;
+  pendingSharedOverrides = null;
+  pendingSharedId = null;
   cleanURL();
 });
 
@@ -512,11 +563,15 @@ conflictLoad.addEventListener('click', () => {
   if(pendingSharedConfig){
     currentConfig = pendingSharedConfig;
     saveConfig(currentConfig);
+    if(pendingSharedOverrides) saveOverrides(pendingSharedOverrides);
+    if(pendingSharedId) setCloudId(pendingSharedId); // esse cronograma passa a ser "o meu"
     updateHeader();
     render();
   }
   conflictOverlay.classList.remove('open');
   pendingSharedConfig = null;
+  pendingSharedOverrides = null;
+  pendingSharedId = null;
   cleanURL();
   showToast('Escala carregada!');
 });
@@ -583,7 +638,7 @@ function render(){
     `;
     container.appendChild(monthEl);
   }
-  
+
   // clique nos dias (delegado no container, funciona pra todos os meses)
   container.querySelectorAll('.day:not(.empty)').forEach(el => {
     el.addEventListener('click', () => {
@@ -591,26 +646,67 @@ function render(){
       openDayModal(new Date(y, m - 1, d));
     });
   });
- 
-  setupBackToTodayWatcher();
 
+  setupBackToTodayWatcher();
 }
 
 /* =========================================================
    Inicialização
    ========================================================= */
 
-function init(){
-  const shared = parseSharedConfigFromURL();
-  const localExists = hasStoredConfig();
+async function init(){
+  const params = new URLSearchParams(window.location.search);
+  const urlId = params.get('id');
+  const myCloudId = getCloudId();
 
-  if(shared && localExists){
-    pendingSharedConfig = shared;
-    conflictOverlay.classList.add('open');
-  }else if(shared && !localExists){
-    currentConfig = shared;
-    saveConfig(currentConfig);
+  if(urlId){
+    // Link novo (formato Firebase): ?id=XXXXXX
+    if(!cloudDisponivel()){
+      showToast('Recurso online indisponível agora');
+    }else{
+      showToast('Carregando cronograma...');
+      let cloudData = null;
+      try{
+        cloudData = await window.firebaseCronograma.carregarCronogramaPorId(urlId);
+      }catch(e){
+        console.error('Erro ao carregar cronograma da nuvem:', e);
+      }
+
+      if(cloudData && cloudData.config){
+        if(urlId === myCloudId){
+          // é o meu próprio link — só traz o que estiver mais recente na nuvem
+          currentConfig = cloudData.config;
+          saveConfig(currentConfig);
+          if(cloudData.overrides) saveOverrides(cloudData.overrides);
+        }else if(hasStoredConfig() || myCloudId){
+          // já existe cronograma local/próprio — não sobrescreve sem perguntar
+          pendingSharedConfig = cloudData.config;
+          pendingSharedOverrides = cloudData.overrides || {};
+          pendingSharedId = urlId;
+          conflictOverlay.classList.add('open');
+        }else{
+          // nada local ainda — adota direto e assume esse ID como "meu"
+          currentConfig = cloudData.config;
+          saveConfig(currentConfig);
+          if(cloudData.overrides) saveOverrides(cloudData.overrides);
+          setCloudId(urlId);
+        }
+      }else{
+        showToast('Cronograma não encontrado');
+      }
+    }
     cleanURL();
+  }else{
+    // Fallback: link antigo baseado em parâmetros (?nome=&escala=...)
+    const legacyShared = parseSharedConfigFromURL();
+    if(legacyShared && hasStoredConfig()){
+      pendingSharedConfig = legacyShared;
+      conflictOverlay.classList.add('open');
+    }else if(legacyShared && !hasStoredConfig()){
+      currentConfig = legacyShared;
+      saveConfig(currentConfig);
+      cleanURL();
+    }
   }
 
   updateHeader();
