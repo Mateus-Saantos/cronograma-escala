@@ -12,7 +12,9 @@
         <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menu">⋮</button>
         <div id="menuDropdown" class="menu-dropdown">
           <button type="button" data-action="config">Configurações</button>
-          <button type="button" data-action="share">Compartilhar escala</button>
+          <button type="button" data-action="ferias">Férias planejadas</button>
+          <button type="button" data-action="mine">Meu cronograma</button>
+          <button type="button" data-action="manager">Gerenciar cronogramas</button>
           <button type="button" data-action="about">Sobre</button>
         </div>
       </div>
@@ -42,6 +44,11 @@
         <span><i class="dot folga-past"></i>Folga (passada)</span>
         <span><i class="dot trabalho-past"></i>Trabalho (passado)</span>
       </div>
+    </div>
+
+    <div id="viewOnlyBanner" class="view-only-banner">
+      <span id="viewOnlyText">Visualizando um cronograma compartilhado</span>
+      <button id="viewOnlyCreateBtn" type="button">Criar o meu</button>
     </div>
 
     <div id="calendar"></div>
@@ -118,6 +125,10 @@
           <button id="settingsCancel" type="button" class="btn-ghost">Cancelar</button>
           <button id="settingsSave" type="button" class="btn-save">Salvar</button>
         </div>
+
+        <button id="settingsLoadExisting" type="button" class="btn-ghost-mini settings-load-existing">
+          Já tenho um ID — carregar cronograma existente
+        </button>
       </div>
     </div>
 
@@ -142,6 +153,75 @@
         <p class="about-text">Configure seu nome, tipo de escala e data de referência em ⋮ → Configurações. </p><br>
         <p class="about-text">Compartilhe sua escala com colegas em ⋮ → Compartilhar escala.</p>
 
+      </div>
+    </div>
+
+    <!-- Modal Férias planejadas -->
+    <div id="feriasOverlay" class="modal-overlay">
+      <div class="modal">
+        <button id="feriasClose" class="modal-close" type="button">&times;</button>
+        <h2 id="feriasTitle">Férias planejadas</h2>
+
+        <!-- Vista de lista -->
+        <div id="feriasListView">
+          <div id="feriasListContent" class="manager-list"></div>
+          <div class="modal-actions">
+            <button id="feriasNewBtn" type="button" class="btn-save">+ Nova férias</button>
+          </div>
+        </div>
+
+        <!-- Vista de formulário (criar/editar) -->
+        <div id="feriasFormView" class="ferias-form-view">
+          <label for="feriasDataInicio">Data de início</label>
+          <input type="date" id="feriasDataInicio">
+
+          <label for="feriasQuantidade">Quantidade de dias</label>
+          <input type="number" id="feriasQuantidade" min="1" value="15">
+
+          <p id="feriasPreview" class="ferias-preview"></p>
+
+          <div class="modal-actions">
+            <button id="feriasFormCancel" type="button" class="btn-ghost">Cancelar</button>
+            <button id="feriasFormSave" type="button" class="btn-save">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Meu cronograma -->
+    <div id="mineOverlay" class="modal-overlay">
+      <div class="modal">
+        <button id="mineClose" class="modal-close" type="button">&times;</button>
+        <h2>Meu cronograma</h2>
+        <p class="about-text">ID:</p>
+        <p id="mineId" class="mine-id">--</p>
+        <div class="modal-actions">
+          <button id="mineCopy" type="button" class="btn-ghost">Copiar ID</button>
+          <button id="mineShare" type="button" class="btn-save">Compartilhar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Gerenciador: senha -->
+    <div id="managerPasswordOverlay" class="modal-overlay">
+      <div class="modal">
+        <button id="managerPasswordClose" class="modal-close" type="button">&times;</button>
+        <h2>🔐 Gerenciador de Cronogramas</h2>
+        <label for="managerPasswordInput">Digite a senha</label>
+        <input type="password" id="managerPasswordInput" placeholder="••••••••">
+        <div class="modal-actions">
+          <button id="managerPasswordCancel" type="button" class="btn-ghost">Cancelar</button>
+          <button id="managerPasswordSubmit" type="button" class="btn-save">Acessar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Gerenciador: lista -->
+    <div id="managerListOverlay" class="modal-overlay">
+      <div class="modal">
+        <button id="managerListClose" class="modal-close" type="button">&times;</button>
+        <h2>Gerenciador de Cronogramas</h2>
+        <div id="managerListContent" class="manager-list"></div>
       </div>
     </div>
 

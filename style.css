@@ -16,6 +16,13 @@
   --trabalho-past-bg: rgba(255,138,92,0.04);
   --trabalho-past-border: rgba(255,138,92,0.10);
 
+  --ferias: #e8c547;
+  --ferias-bg: rgba(232,197,71,0.14);
+  --ferias-border: rgba(232,197,71,0.4);
+  --ferias-past: #8a7d43;
+  --ferias-past-bg: rgba(232,197,71,0.05);
+  --ferias-past-border: rgba(232,197,71,0.15);
+
   --text: #e8edf2;
   --muted: #7c8894;
   --mono: 'SF Mono', 'Consolas', 'Roboto Mono', monospace;
@@ -248,6 +255,17 @@ h1{ font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
   border: 1px solid var(--trabalho-past-border);
 }
 .day.na{ color: var(--muted); opacity: 0.3; }
+
+.day.ferias{
+  background: var(--ferias-bg);
+  color: var(--ferias);
+  border: 1px solid var(--ferias-border);
+}
+.day.ferias.past{
+  background: var(--ferias-past-bg);
+  color: var(--ferias-past);
+  border: 1px solid var(--ferias-past-border);
+}
 
 .day.today::after{
   content:'';
@@ -525,10 +543,135 @@ footer{
 .back-to-today-icon{ font-size: 14px; line-height: 1; }
 
 
+/* ===== Modo visualização (link de outra pessoa, sem virar dono) ===== */
+.view-only-banner{
+  display:none;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--trabalho-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 16px; 
+  font-size: 12.5px;
+  color: var(--text);
+  margin-top: 190px !important;
+}
+.view-only-banner.show{ display:flex; }
+.view-only-banner button{
+  flex-shrink: 0;
+  background: var(--trabalho);
+  color: #2a1206;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ===== Configurações: botão "já tenho um ID" ===== */
+.settings-load-existing{
+  width: 100%;
+  margin-top: 10px;
+  background: transparent;
+}
+
+/* ===== Meu cronograma ===== */
+.mine-id{
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--folga);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* ===== Gerenciador ===== */
+.manager-list{
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+.manager-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.manager-item-info{ display:flex; flex-direction:column; gap: 2px; }
+.manager-item-name{ font-size: 13.5px; font-weight: 600; }
+.manager-item-meta{
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.manager-item button{
+  flex-shrink: 0;
+  background: var(--folga);
+  color: #08130f;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.manager-empty{
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ===== Férias planejadas ===== */
+.ferias-form-view{ display:none; }
+.ferias-form-view.show{ display:block; }
+.ferias-preview{
+  font-size: 12.5px;
+  color: var(--ferias);
+  font-family: var(--mono);
+  margin-top: 10px;
+}
+.manager-item-actions{
+  display:flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.manager-item-actions button{
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.manager-item-actions button.danger{
+  color: var(--trabalho);
+  border-color: var(--trabalho-border);
+  background: transparent;
+}
+
 @media (min-width: 1200px) {
   /* Desktop */
   body{
+    margin: 170px 0 0;
     padding: 0 25% 0 25%;
+  }
+  .view-only-banner{
+    margin-top: 210px !important;
   }
   .menu_superior {
     padding-top: 20px;
@@ -544,13 +687,17 @@ footer{
     top: 20px;
     right: 25%;
   }
-  #calendar{
-    margin-top: 23%!important;
-  }
   footer{
     margin: 5% 25% ;
   }
   .back-to-today{
     left: 48%;
+  }
+    .day{
+    font-size: 16px;
+  }
+  .pin{
+    margin-bottom: 10px;
+    font-size: 14px !important;
   }
 }
