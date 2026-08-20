@@ -1,0 +1,49 @@
+/* =========================================================
+   Tema Claro — mesma identidade visual do tema escuro,
+   adaptada para fundo claro. Só variáveis de cor aqui.
+   ========================================================= */
+:root{
+  /* Base */
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --line: #e1e6ea;
+  --text: #1b232b;
+  --muted: #667079;
+  --mono: 'SF Mono', 'Consolas', 'Roboto Mono', monospace;
+
+  /* Trabalho / Folga / Férias
+     Mesmas cores-base do tema escuro, ajustadas um pouco mais
+     escuras/saturadas para manter contraste legível sobre branco. */
+  --folga: #1f9d6c;
+  --folga-bg: rgba(31,157,108,0.10);
+  --folga-border: rgba(31,157,108,0.35);
+  --trabalho: #d9662f;
+  --trabalho-bg: rgba(217,102,47,0.08);
+  --trabalho-border: rgba(217,102,47,0.28);
+
+  --folga-past: #86a99a;
+  --folga-past-bg: rgba(31,157,108,0.05);
+  --folga-past-border: rgba(31,157,108,0.15);
+  --trabalho-past: #c99b83;
+  --trabalho-past-bg: rgba(217,102,47,0.04);
+  --trabalho-past-border: rgba(217,102,47,0.12);
+
+  --ferias: #a8790a;
+  --ferias-bg: rgba(168,121,10,0.12);
+  --ferias-border: rgba(168,121,10,0.35);
+  --ferias-past: #b7a077; 
+  --ferias-past-bg: rgba(168,121,10,0.05);
+  --ferias-past-border: rgba(168,121,10,0.15);
+
+  /* Texto sobre botões de destaque (fundo mais escuro/saturado, texto claro em cima) */
+  --on-accent-folga: #ffffff;
+  --on-accent-trabalho: #ffffff;
+
+  /* Sombras e overlay de modal — mais suaves que no escuro */
+  --shadow-color: rgba(15,20,24,0.12);
+  --shadow-color-lg: rgba(15,20,24,0.18);
+  --overlay-bg: rgba(15,20,24,0.45);
+
+  /* Ícone do GitHub no rodapé (logo já é escura, não precisa inverter) */
+  --icon-filter: none;
+}

@@ -9,6 +9,7 @@ const OVERRIDES_STORAGE_KEY = 'escala-overrides-2026';
 const CONFIG_STORAGE_KEY = 'escala-config-v1';
 const CLOUD_ID_STORAGE_KEY = 'escala-cloud-id';
 const FERIAS_STORAGE_KEY = 'escala-ferias';
+const THEME_STORAGE_KEY = 'escala-tema'; // preferência só do dispositivo, nunca vai pro Firebase
 
 const DEFAULT_CONFIG = {
   nome: '',
@@ -387,6 +388,29 @@ if (menu && calendar) {
 }
 
 /* =========================================================
+   Tema (Escuro/Claro) — preferência puramente visual do
+   dispositivo. NÃO faz parte de currentConfig, não é
+   sincronizada com o Firebase, não afeta escala/férias/edições.
+   Preparado pra futuros temas: basta criar theme-X.css e
+   adicionar uma <option> no #cfgTema.
+   ========================================================= */
+
+function loadTheme(){
+  return localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+}
+
+function applyTheme(tema){
+  const link = document.getElementById('themeStylesheet');
+  if(link) link.setAttribute('href', `theme-${tema}.css`);
+  localStorage.setItem(THEME_STORAGE_KEY, tema);
+}
+
+const cfgTemaSelect = document.getElementById('cfgTema');
+if(cfgTemaSelect){
+  cfgTemaSelect.addEventListener('change', () => applyTheme(cfgTemaSelect.value));
+}
+
+/* =========================================================
    Toast
    ========================================================= */
 
@@ -647,6 +671,7 @@ function fillSettingsForm(config){
 
 function openSettings(mode){
   settingsMode = mode || 'edit';
+  if(cfgTemaSelect) cfgTemaSelect.value = loadTheme();
   if(settingsMode === 'create'){
     settingsTitle.textContent = 'Configure seu cronograma';
     settingsSave.textContent = 'Criar meu cronograma';

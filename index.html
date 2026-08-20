@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  // Aplica o tema salvo ANTES do CSS carregar, pra não piscar o tema errado.
+  (function(){
+    var tema = localStorage.getItem('escala-tema') || 'dark';
+    document.write('<link id="themeStylesheet" rel="stylesheet" href="theme-' + tema + '.css">');
+  })();
+</script>
 <link rel="stylesheet" href="style.css">
 <title>Cronograma de Escala</title>
 </head>
@@ -120,6 +127,12 @@
           <label class="radio-option"><input type="radio" name="cfgRefStatus" value="trabalho"> Trabalhando</label>
           <label class="radio-option"><input type="radio" name="cfgRefStatus" value="folga"> De folga</label>
         </div>
+
+        <label for="cfgTema">Tema</label>
+        <select id="cfgTema">
+          <option value="dark">Escuro</option>
+          <option value="light">Claro</option>
+        </select>
 
         <div class="modal-actions">
           <button id="settingsCancel" type="button" class="btn-ghost">Cancelar</button>

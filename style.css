@@ -1,32 +1,3 @@
-:root{
-  --bg: #0f1418;
-  --panel: #161d24;
-  --line: #26313a;
-  --folga: #35c98f;
-  --folga-bg: rgba(53,201,143,0.14);
-  --folga-border: rgba(53,201,143,0.35);
-  --trabalho: #ff8a5c;
-  --trabalho-bg: rgba(255,138,92,0.10);
-  --trabalho-border: rgba(255,138,92,0.25);
-
-  --folga-past: #4d7a67;
-  --folga-past-bg: rgba(53,201,143,0.05);
-  --folga-past-border: rgba(53,201,143,0.12);
-  --trabalho-past: #8a6252;
-  --trabalho-past-bg: rgba(255,138,92,0.04);
-  --trabalho-past-border: rgba(255,138,92,0.10);
-
-  --ferias: #e8c547;
-  --ferias-bg: rgba(232,197,71,0.14);
-  --ferias-border: rgba(232,197,71,0.4);
-  --ferias-past: #8a7d43;
-  --ferias-past-bg: rgba(232,197,71,0.05);
-  --ferias-past-border: rgba(232,197,71,0.15);
-
-  --text: #e8edf2;
-  --muted: #7c8894;
-  --mono: 'SF Mono', 'Consolas', 'Roboto Mono', monospace;
-}
 *{box-sizing:border-box; margin:0; padding:0;}
 body{
   background: var(--bg);
@@ -43,8 +14,8 @@ body{
   left: 0;
   width: 100%;
   z-index: 1000;
-  background-color: #161d24;
-  border-bottom: 1px solid #26313a;
+  background-color: var(--panel);
+  border-bottom: 1px solid var(--line);
 }
   #calendar{
   margin-top: 30%;
@@ -91,7 +62,7 @@ h1{ font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
   border-radius: 10px;
   padding: 10px;
   z-index: 1500;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  box-shadow: 0 8px 24px var(--shadow-color);
   text-align: left;
 }
 .year-dropdown.open{ display:block; }
@@ -146,7 +117,7 @@ h1{ font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
 }
 .btn-save-mini{
   background: var(--folga);
-  color: #08130f;
+  color: var(--on-accent-folga);
   border: 1px solid var(--folga);
 }
 .btn-ghost-mini{
@@ -305,7 +276,7 @@ footer{
     width: 30px;
     height: 30px;
     object-fit: contain;
-    filter: invert(1);
+    filter: var(--icon-filter);
   }
 
 /* ===== Menu de três pontos ===== */
@@ -339,7 +310,7 @@ footer{
   border-radius: 10px;
   overflow: hidden;
   z-index: 1500;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  box-shadow: 0 8px 24px var(--shadow-color);
 }
 .menu-dropdown.open{ display:block; }
 .menu-dropdown button{
@@ -363,7 +334,7 @@ footer{
   display:none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: var(--overlay-bg);
   z-index: 2000;
   align-items: center;
   justify-content: center;
@@ -451,7 +422,7 @@ footer{
 }
 .btn-save{
   background: var(--folga);
-  color: #08130f;
+  color: var(--on-accent-folga);
   border-color: var(--folga);
 }
 
@@ -526,7 +497,7 @@ footer{
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 20px var(--shadow-color-lg);
   z-index: 999;
   opacity: 0;
   transform: translateY(12px);
@@ -562,7 +533,7 @@ footer{
 .view-only-banner button{
   flex-shrink: 0;
   background: var(--trabalho);
-  color: #2a1206;
+  color: var(--on-accent-trabalho);
   border: none;
   border-radius: 6px;
   padding: 7px 10px;
@@ -623,7 +594,7 @@ footer{
 .manager-item button{
   flex-shrink: 0;
   background: var(--folga);
-  color: #08130f;
+  color: var(--on-accent-folga);
   border: none;
   border-radius: 6px;
   padding: 8px 10px;
@@ -680,8 +651,8 @@ footer{
     left: 0;
     width: 100%;
     z-index: 1000;
-    background-color: #161d24;
-    border-bottom: 1px solid #26313a;
+    background-color: var(--panel);
+    border-bottom: 1px solid var(--line);
   }
   .menu-wrap{
     top: 20px;
