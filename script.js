@@ -753,7 +753,7 @@ async function shareSchedule(){
   showToast('Gerando link...');
   try{
     const cloudId = await window.firebaseCronograma.salvarCronograma(
-      { config: currentConfig, overrides: loadOverrides() },
+      { config: currentConfig, overrides: loadOverrides(), ferias: loadFerias() },
       getCloudId() // reaproveita o ID se já existir; se não, o firebase.js gera um novo
     );
     setCloudId(cloudId);
@@ -1104,9 +1104,12 @@ function render(){
       const isToday = isSameDay(date, today);
       const isPast = date < today && !isToday;
 
-      if(status === 'folga') folgaCount++;
-      if(status === 'trabalho') trabalhoCount++;
-      if(feriasDoDia) feriasCount++;
+      // displayType é o estado final do dia — mesma fonte usada na renderização,
+      // agora também usada na contagem, pra folga+trabalho+férias nunca passar
+      // do total de dias do mês.
+      if(displayType === 'ferias') feriasCount++;
+      else if(displayType === 'folga') folgaCount++;
+      else if(displayType === 'trabalho') trabalhoCount++;
 
       const cls = `${displayType}${isPast ? ' past' : ''}${isToday ? ' today' : ''}${isManual ? ' manual' : ''}`;
       const pin = comment ? '<span class="pin">📌</span>' : '';
