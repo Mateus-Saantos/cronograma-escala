@@ -4,9 +4,9 @@
    ========================================================= */
 :root{
   /* Base */
-  --bg: #f4f6f8;
+  --bg: #eeeeee;
   --panel: #ffffff;
-  --line: #e1e6ea;
+  --line: #b8bcbe;
   --text: #1b232b;
   --muted: #667079;
   --mono: 'SF Mono', 'Consolas', 'Roboto Mono', monospace;
@@ -15,18 +15,18 @@
      Mesmas cores-base do tema escuro, ajustadas um pouco mais
      escuras/saturadas para manter contraste legível sobre branco. */
   --folga: #1f9d6c;
-  --folga-bg: rgba(31,157,108,0.10);
-  --folga-border: rgba(31,157,108,0.35);
+  --folga-bg: rgba(31,157,108,0.20);
+  --folga-border: rgba(31,157,108,0.85);
   --trabalho: #d9662f;
-  --trabalho-bg: rgba(217,102,47,0.08);
-  --trabalho-border: rgba(217,102,47,0.28);
+  --trabalho-bg: rgba(217,102,47,0.28);
+  --trabalho-border: rgba(217,102,47,0.85);
 
   --folga-past: #86a99a;
-  --folga-past-bg: rgba(31,157,108,0.05);
-  --folga-past-border: rgba(31,157,108,0.15);
+  --folga-past-bg: rgba(31,157,108,0.12);
+  --folga-past-border: rgba(31,157,108,0.18);
   --trabalho-past: #c99b83;
-  --trabalho-past-bg: rgba(217,102,47,0.04);
-  --trabalho-past-border: rgba(217,102,47,0.12);
+  --trabalho-past-bg: rgba(217,102,47,0.12);
+  --trabalho-past-border: rgba(217,102,47,0.18);
 
   --ferias: #a8790a;
   --ferias-bg: rgba(168,121,10,0.12);
@@ -43,6 +43,7 @@
   --shadow-color: rgba(15,20,24,0.12);
   --shadow-color-lg: rgba(15,20,24,0.18);
   --overlay-bg: rgba(15,20,24,0.45);
+  --shadow: 0 0 25px rgba(0, 0, 0, 0.13);
 
   /* Ícone do GitHub no rodapé (logo já é escura, não precisa inverter) */
   --icon-filter: none;
