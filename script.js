@@ -10,6 +10,12 @@ const CONFIG_STORAGE_KEY = 'escala-config-v1';
 const CLOUD_ID_STORAGE_KEY = 'escala-cloud-id';
 const FERIAS_STORAGE_KEY = 'escala-ferias';
 const THEME_STORAGE_KEY = 'escala-tema'; // preferência só do dispositivo, nunca vai pro Firebase
+// ⚠️ FASE 1 (nota, sem alteração de comportamento): as 4 chaves acima são
+// fixas porque hoje existe só UM calendário por dispositivo. Na Fase 3/4,
+// quando existir mais de um, cada uma provavelmente precisa virar uma
+// função de chave por calendário (ex.: `escala-config-v1:${calendarId}`)
+// em vez de string fixa. Não fiz essa mudança agora pra não arriscar
+// perder dados do calendário atual do usuário sem uma migração real.
 
 const DEFAULT_CONFIG = {
   nome: '',
@@ -362,6 +368,44 @@ let isViewOnly = false;
 let viewOnlyOverrides = {};
 let viewOnlyFerias = [];
 let viewOnlyId = null;
+
+/* =========================================================
+   FASE 1 — Preparação para múltiplos calendários (futuro)
+
+   Hoje a aplicação tem UM único calendário por dispositivo/ID:
+   config, edições, férias e ID vivem cada um numa chave fixa de
+   localStorage (OVERRIDES_STORAGE_KEY, CONFIG_STORAGE_KEY, etc.)
+   e num punhado de variáveis globais (currentConfig, isViewOnly...).
+   Isso é o que faz TODO o resto do arquivo assumir implicitamente
+   "só existe um cronograma".
+
+   getCurrentCalendar() não muda nada disso — é só uma "janela" que
+   agrupa os dados desse único calendário atual num objeto, pra que
+   a futura tela "Meus Calendários" (Fase 2) e a troca entre vários
+   calendários (Fase 3) tenham um ponto único de leitura pra migrar,
+   em vez de espalhar currentConfig/loadOverrides()/loadFerias() por
+   toda parte. Nada no projeto chama essa função ainda.
+
+   Quando a Fase 3 chegar, a expectativa é que loadConfig/saveConfig/
+   loadOverrides/saveOverrides/loadFerias/saveFerias/getCloudId/
+   setCloudId passem a receber um "calendarId" (hoje implícito, só
+   existe um) — e getCurrentCalendar() vira o lugar natural pra
+   resolver "qual calendário está ativo agora".
+   ========================================================= */
+function getCurrentCalendar(){
+  return {
+    id: getCloudId(),                 // null se este calendário ainda não foi compartilhado
+    name: currentConfig.nome || '',
+    type: currentConfig.tipo,
+    config: currentConfig,
+    overrides: getActiveOverrides(),
+    ferias: getActiveFerias(),
+    isViewOnly: isViewOnly
+  };
+}
+// Exposto em window pelo mesmo motivo que window.firebaseCronograma:
+// disponibiliza a leitura pra quando a Fase 2 precisar consumir isso.
+window.getCurrentCalendar = getCurrentCalendar;
 
 const now = new Date();
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
