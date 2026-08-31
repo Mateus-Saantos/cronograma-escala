@@ -10,12 +10,13 @@ const CONFIG_STORAGE_KEY = 'escala-config-v1';
 const CLOUD_ID_STORAGE_KEY = 'escala-cloud-id';
 const FERIAS_STORAGE_KEY = 'escala-ferias';
 const THEME_STORAGE_KEY = 'escala-tema'; // preferência só do dispositivo, nunca vai pro Firebase
-// ⚠️ FASE 1 (nota, sem alteração de comportamento): as 4 chaves acima são
-// fixas porque hoje existe só UM calendário por dispositivo. Na Fase 3/4,
-// quando existir mais de um, cada uma provavelmente precisa virar uma
-// função de chave por calendário (ex.: `escala-config-v1:${calendarId}`)
-// em vez de string fixa. Não fiz essa mudança agora pra não arriscar
-// perder dados do calendário atual do usuário sem uma migração real.
+
+// FASE 2: registro de "Meus Calendários" deste dispositivo + qual está ativo.
+// As 4 chaves acima continuam existindo como nomes-base, mas agora os dados
+// reais são gravados por calendário (ver calendarStorageKey). As chaves puras
+// (sem sufixo) só são lidas uma vez, na migração, e depois ficam órfãs.
+const MY_CALENDARS_STORAGE_KEY = 'escala-meus-calendarios';
+const ACTIVE_CALENDAR_STORAGE_KEY = 'escala-calendario-ativo';
 
 const DEFAULT_CONFIG = {
   nome: '',
@@ -24,6 +25,107 @@ const DEFAULT_CONFIG = {
   referenceStatus: 'folga', // 'folga' | 'trabalho'
   custom: { trabalho: 3, folga: 2 }
 };
+
+/* =========================================================
+   FASE 2 — "Meus Calendários": identidade separada dos dados
+
+   Cada calendário deste dispositivo tem um "localId" (gerado aqui,
+   nada a ver com o ID do Firebase/compartilhamento). É esse localId
+   que namespacea as 4 chaves de storage abaixo. O ID do Firebase
+   (cloudId) é só um DADO do calendário — pode nem existir ainda,
+   se o usuário nunca compartilhou.
+
+   getMyCalendars()      → registro de todos os calendários do dispositivo
+   getActiveCalendarId() → qual calendário está ativo agora (persistido)
+   calendarStorageKey()  → helper usado por loadConfig/saveConfig/etc.
+
+   Nesta fase só existe (e só pode existir) UM calendário sendo criado
+   ou usado por vez — não há troca nem criação de um segundo ainda.
+   ========================================================= */
+
+function gerarCalendarioId(){
+  return 'cal_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function calendarStorageKey(baseKey, calendarId){
+  return `${baseKey}::${calendarId}`;
+}
+
+function getMyCalendars(){
+  try{
+    const raw = localStorage.getItem(MY_CALENDARS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    console.error('Erro ao ler Meus Calendários:', e);
+    return [];
+  }
+}
+
+function saveMyCalendars(lista){
+  try{
+    localStorage.setItem(MY_CALENDARS_STORAGE_KEY, JSON.stringify(lista));
+  }catch(e){
+    console.error('Erro ao salvar Meus Calendários:', e);
+  }
+}
+
+// Cria ou atualiza a entrada de um calendário no registro (merge parcial).
+function registrarCalendario(localId, dados){
+  const lista = getMyCalendars();
+  const idx = lista.findIndex(c => c.localId === localId);
+  if(idx === -1){
+    lista.push({ localId, cloudId: null, name: '', type: '12x36', ...dados });
+  }else{
+    lista[idx] = { ...lista[idx], ...dados };
+  }
+  saveMyCalendars(lista);
+}
+
+function getActiveCalendarId(){
+  return localStorage.getItem(ACTIVE_CALENDAR_STORAGE_KEY);
+}
+
+/**
+ * Migração única e idempotente: se este dispositivo ainda usa o formato
+ * "achatado" de antes da Fase 2 (chaves sem namespace de calendário),
+ * cria o primeiro calendário oficial ("Meus Calendários") copiando os
+ * dados existentes — sem apagar nada do formato antigo.
+ *
+ * Se já existe um calendário ativo, não faz nada (idempotente: pode
+ * rodar em toda inicialização sem duplicar ou sobrescrever dados).
+ */
+function migrarParaMeusCalendarios(){
+  if(getActiveCalendarId()) return; // já migrado (ou já é um dispositivo novo já inicializado)
+
+  const configAntigo = localStorage.getItem(CONFIG_STORAGE_KEY);
+  const overridesAntigo = localStorage.getItem(OVERRIDES_STORAGE_KEY);
+  const feriasAntigo = localStorage.getItem(FERIAS_STORAGE_KEY);
+  const cloudIdAntigo = localStorage.getItem(CLOUD_ID_STORAGE_KEY);
+
+  const novoId = gerarCalendarioId();
+  let nome = '', tipo = '12x36';
+
+  // Copia os dados existentes pras novas chaves namespaced — as chaves
+  // antigas NÃO são apagadas, ficam só órfãs e inofensivas.
+  if(configAntigo){
+    localStorage.setItem(calendarStorageKey(CONFIG_STORAGE_KEY, novoId), configAntigo);
+    try{
+      const cfg = JSON.parse(configAntigo);
+      nome = cfg.nome || '';
+      tipo = cfg.tipo || '12x36';
+    }catch(e){
+      console.error('Erro ao ler configuração antiga durante a migração:', e);
+    }
+  }
+  if(overridesAntigo) localStorage.setItem(calendarStorageKey(OVERRIDES_STORAGE_KEY, novoId), overridesAntigo);
+  if(feriasAntigo) localStorage.setItem(calendarStorageKey(FERIAS_STORAGE_KEY, novoId), feriasAntigo);
+  if(cloudIdAntigo) localStorage.setItem(calendarStorageKey(CLOUD_ID_STORAGE_KEY, novoId), cloudIdAntigo);
+
+  registrarCalendario(novoId, { name: nome, type: tipo, cloudId: cloudIdAntigo || null });
+  localStorage.setItem(ACTIVE_CALENDAR_STORAGE_KEY, novoId);
+}
+
+migrarParaMeusCalendarios();
 
 /* ---------- Utilidades de data (sem bugs de timezone) ----------
    Trabalha sempre com componentes locais (ano, mês, dia) e usa
@@ -97,7 +199,7 @@ function calculateScheduleDate(date, config){
 
 function loadConfig(){
   try{
-    const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+    const raw = localStorage.getItem(calendarStorageKey(CONFIG_STORAGE_KEY, getActiveCalendarId()));
     if(raw) return Object.assign({}, DEFAULT_CONFIG, JSON.parse(raw));
   }catch(e){
     console.error('Erro ao ler configuração:', e);
@@ -107,21 +209,21 @@ function loadConfig(){
 
 function saveConfig(config){
   try{
-    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+    localStorage.setItem(calendarStorageKey(CONFIG_STORAGE_KEY, getActiveCalendarId()), JSON.stringify(config));
   }catch(e){
     console.error('Erro ao salvar configuração:', e);
   }
 }
 
 function hasStoredConfig(){
-  return localStorage.getItem(CONFIG_STORAGE_KEY) !== null;
+  return localStorage.getItem(calendarStorageKey(CONFIG_STORAGE_KEY, getActiveCalendarId())) !== null;
 }
 
 /* ---------- Persistência: edições manuais por dia (já existente) ---------- */
 
 function loadOverrides(){
   try{
-    const raw = localStorage.getItem(OVERRIDES_STORAGE_KEY);
+    const raw = localStorage.getItem(calendarStorageKey(OVERRIDES_STORAGE_KEY, getActiveCalendarId()));
     return raw ? JSON.parse(raw) : {};
   }catch(e){
     console.error('Erro ao ler edições:', e);
@@ -131,7 +233,7 @@ function loadOverrides(){
 
 function saveOverrides(overrides){
   try{
-    localStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+    localStorage.setItem(calendarStorageKey(OVERRIDES_STORAGE_KEY, getActiveCalendarId()), JSON.stringify(overrides));
   }catch(e){
     console.error('Erro ao salvar edições:', e);
   }
@@ -150,7 +252,7 @@ function getActiveOverrides(){
 
 function loadFerias(){
   try{
-    const raw = localStorage.getItem(FERIAS_STORAGE_KEY);
+    const raw = localStorage.getItem(calendarStorageKey(FERIAS_STORAGE_KEY, getActiveCalendarId()));
     return raw ? JSON.parse(raw) : [];
   }catch(e){
     console.error('Erro ao ler férias:', e);
@@ -160,7 +262,7 @@ function loadFerias(){
 
 function saveFerias(lista){
   try{
-    localStorage.setItem(FERIAS_STORAGE_KEY, JSON.stringify(lista));
+    localStorage.setItem(calendarStorageKey(FERIAS_STORAGE_KEY, getActiveCalendarId()), JSON.stringify(lista));
   }catch(e){
     console.error('Erro ao salvar férias:', e);
   }
@@ -201,11 +303,15 @@ function formatFeriasRange(f){
    documento no Firestore — o link não muda depois de gerado. */
 
 function getCloudId(){
-  return localStorage.getItem(CLOUD_ID_STORAGE_KEY);
+  return localStorage.getItem(calendarStorageKey(CLOUD_ID_STORAGE_KEY, getActiveCalendarId()));
 }
 
 function setCloudId(id){
-  localStorage.setItem(CLOUD_ID_STORAGE_KEY, id);
+  const activeId = getActiveCalendarId();
+  localStorage.setItem(calendarStorageKey(CLOUD_ID_STORAGE_KEY, activeId), id);
+  // mantém "Meus Calendários" em dia — o cloudId é um dado do calendário,
+  // não a identidade dele (que é o localId gerado na migração/criação).
+  if(activeId) registrarCalendario(activeId, { cloudId: id });
 }
 
 /* ---------- Ponte com o firebase.js ----------
@@ -339,7 +445,9 @@ async function loadCronogramaById(id, asOwner){
     saveConfig(currentConfig);
     if(cloudData.overrides) saveOverrides(cloudData.overrides);
     saveFerias(cloudData.ferias || []);
-    setCloudId(id);
+    setCloudId(id); // também atualiza o cloudId no registro (ver setCloudId)
+    const activeId = getActiveCalendarId();
+    if(activeId) registrarCalendario(activeId, { name: currentConfig.nome || '', type: currentConfig.tipo });
   }else{
     isViewOnly = true;
     viewOnlyId = id;
@@ -370,31 +478,25 @@ let viewOnlyFerias = [];
 let viewOnlyId = null;
 
 /* =========================================================
-   FASE 1 — Preparação para múltiplos calendários (futuro)
+   FASE 2 — getCurrentCalendar(): calendário atualmente ativo
 
-   Hoje a aplicação tem UM único calendário por dispositivo/ID:
-   config, edições, férias e ID vivem cada um numa chave fixa de
-   localStorage (OVERRIDES_STORAGE_KEY, CONFIG_STORAGE_KEY, etc.)
-   e num punhado de variáveis globais (currentConfig, isViewOnly...).
-   Isso é o que faz TODO o resto do arquivo assumir implicitamente
-   "só existe um cronograma".
+   Agora que existe um localId (identidade, gerado na migração/criação,
+   nunca muda) separado do cloudId (dado do calendário — o ID do
+   documento no Firebase, que só existe depois do primeiro
+   compartilhamento), getCurrentCalendar() expõe os dois com clareza:
 
-   getCurrentCalendar() não muda nada disso — é só uma "janela" que
-   agrupa os dados desse único calendário atual num objeto, pra que
-   a futura tela "Meus Calendários" (Fase 2) e a troca entre vários
-   calendários (Fase 3) tenham um ponto único de leitura pra migrar,
-   em vez de espalhar currentConfig/loadOverrides()/loadFerias() por
-   toda parte. Nada no projeto chama essa função ainda.
+   - id / localId → identidade estável deste calendário no dispositivo
+   - cloudId       → identidade dele no Firebase (pode ser null)
 
-   Quando a Fase 3 chegar, a expectativa é que loadConfig/saveConfig/
-   loadOverrides/saveOverrides/loadFerias/saveFerias/getCloudId/
-   setCloudId passem a receber um "calendarId" (hoje implícito, só
-   existe um) — e getCurrentCalendar() vira o lugar natural pra
-   resolver "qual calendário está ativo agora".
+   Continua retornando os dados do único calendário existente hoje —
+   isso só muda de verdade na Fase 3, quando houver troca de calendário.
    ========================================================= */
 function getCurrentCalendar(){
+  const localId = getActiveCalendarId();
   return {
-    id: getCloudId(),                 // null se este calendário ainda não foi compartilhado
+    id: localId,
+    localId: localId,
+    cloudId: getCloudId(),
     name: currentConfig.nome || '',
     type: currentConfig.tipo,
     config: currentConfig,
@@ -404,7 +506,7 @@ function getCurrentCalendar(){
   };
 }
 // Exposto em window pelo mesmo motivo que window.firebaseCronograma:
-// disponibiliza a leitura pra quando a Fase 2 precisar consumir isso.
+// disponibiliza a leitura pra quando a Fase 3 precisar consumir isso.
 window.getCurrentCalendar = getCurrentCalendar;
 
 const now = new Date();
@@ -783,6 +885,8 @@ settingsSave.addEventListener('click', async () => {
       saveConfig(currentConfig);
       saveOverrides({});
       saveFerias([]);
+      const activeIdCriacao = getActiveCalendarId();
+      if(activeIdCriacao) registrarCalendario(activeIdCriacao, { name: currentConfig.nome || '', type: currentConfig.tipo });
       await window.firebaseCronograma.salvarIndice(novoId, {
         nome: currentConfig.nome || '(sem nome)',
         tipo: currentConfig.tipo,
@@ -802,6 +906,8 @@ settingsSave.addEventListener('click', async () => {
 
   currentConfig = newConfig;
   saveConfig(currentConfig);
+  const activeIdEdicao = getActiveCalendarId();
+  if(activeIdEdicao) registrarCalendario(activeIdEdicao, { name: currentConfig.nome || '', type: currentConfig.tipo });
   updateHeader();
   closeSettings();
   render();
@@ -1008,12 +1114,21 @@ function excluirFerias(id){
 const mineOverlay = document.getElementById('mineOverlay');
 const mineClose = document.getElementById('mineClose');
 const mineId = document.getElementById('mineId');
+const mineCalendarsHint = document.getElementById('mineCalendarsHint');
 const mineCopy = document.getElementById('mineCopy');
 const mineShare = document.getElementById('mineShare');
 
 function openMineModal(){
   const id = getCloudId();
   mineId.textContent = id || 'Ainda não compartilhado';
+  // FASE 2 — indicação mínima, sem tela nova: quantos calendários este
+  // dispositivo já possui. A troca/lista completa fica pra Fase 3.
+  if(mineCalendarsHint){
+    const total = getMyCalendars().length;
+    mineCalendarsHint.textContent = total > 1
+      ? `Você tem ${total} calendários salvos neste dispositivo.`
+      : 'Você tem 1 calendário salvo neste dispositivo.';
+  }
   mineOverlay.classList.add('open');
 }
 
