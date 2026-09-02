@@ -21,7 +21,7 @@
           <button type="button" data-action="config">Configurações</button>
           <button type="button" data-action="ferias">Férias planejadas</button>
           <button type="button" data-action="mine">Meu cronograma</button>
-          <button type="button" data-action="manager">Gerenciar cronogramas</button>
+          <button type="button" data-action="calendars">Meus calendários</button>
           <button type="button" data-action="about">Sobre</button>
         </div>
       </div>
@@ -215,6 +215,46 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Meus Calendários (Fase 3) -->
+    <div id="myCalendarsOverlay" class="modal-overlay">
+      <div class="modal">
+        <button id="myCalendarsClose" class="modal-close" type="button">&times;</button>
+        <h2>Meus calendários</h2>
+        <div id="myCalendarsListContent" class="manager-list"></div>
+        <div class="modal-actions">
+          <button id="myCalendarsNewBtn" type="button" class="btn-save">+ Novo calendário</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Novo Calendário (Fase 3) -->
+    <div id="newCalendarOverlay" class="modal-overlay">
+      <div class="modal">
+        <button id="newCalendarClose" class="modal-close" type="button">&times;</button>
+        <h2>Novo calendário</h2>
+
+        <label for="newCalendarName">Nome</label>
+        <input type="text" id="newCalendarName" placeholder="Ex: Faculdade">
+
+        <label for="newCalendarType">Tipo</label>
+        <select id="newCalendarType">
+          <option value="12x36">12x36</option>
+          <option value="5x2">5x2</option>
+          <option value="personalizada">Personalizada</option>
+        </select>
+
+        <div class="modal-actions">
+          <button id="newCalendarCancel" type="button" class="btn-ghost">Cancelar</button>
+          <button id="newCalendarCreate" type="button" class="btn-save">Criar calendário</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Os modais abaixo (Gerenciador com senha) pertencem ao conceito antigo de
+         administrador, abandonado nesta fase. Ficam sem uso (nenhum botão do menu
+         aponta mais pra eles), mas não foram removidos para não arriscar quebrar
+         nada — ver relatório da Fase 3 para detalhes. -->
 
     <!-- Modal Gerenciador: senha -->
     <div id="managerPasswordOverlay" class="modal-overlay">

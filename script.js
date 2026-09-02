@@ -410,7 +410,10 @@ viewOnlyCreateBtn.addEventListener('click', async () => {
     await loadCronogramaById(meuId, true);
     showToast('Voltando pro seu cronograma');
   }else{
-    openSettings('create');
+    // FASE 3: mesmo sem cloudId, o calendário ativo já existe localmente —
+    // não faz sentido mais cair no fluxo de "criar do zero via Firebase".
+    switchToCalendar(getActiveCalendarId());
+    showToast('Voltando pro seu calendário');
   }
 });
 
@@ -613,7 +616,7 @@ menuDropdown.querySelectorAll('button[data-action]').forEach(btn => {
     if(action === 'config') openSettings('edit');
     if(action === 'ferias') openManagerFeriasModal();
     if(action === 'mine') openMineModal();
-    if(action === 'manager') openManagerPassword();
+    if(action === 'calendars') openMyCalendarsModal();
     if(action === 'about') aboutOverlay.classList.add('open');
   });
 });
@@ -906,8 +909,13 @@ settingsSave.addEventListener('click', async () => {
 
   currentConfig = newConfig;
   saveConfig(currentConfig);
+  // FASE 3: "nome do calendário" (mostrado em Meus Calendários) e "nome da
+  // pessoa" (currentConfig.nome, mostrado no cabeçalho) são conceitos
+  // diferentes agora. Editar configurações da escala não deve renomear
+  // o calendário na lista — só mantemos o tipo em dia, que é legítimo
+  // (reflete a escala real configurada).
   const activeIdEdicao = getActiveCalendarId();
-  if(activeIdEdicao) registrarCalendario(activeIdEdicao, { name: currentConfig.nome || '', type: currentConfig.tipo });
+  if(activeIdEdicao) registrarCalendario(activeIdEdicao, { type: currentConfig.tipo });
   updateHeader();
   closeSettings();
   render();
@@ -1157,6 +1165,154 @@ mineShare.addEventListener('click', () => {
   mineOverlay.classList.remove('open');
   shareSchedule();
 });
+
+/* =========================================================
+   FASE 3 — Meus Calendários: listar, criar, trocar
+
+   Reaproveita integralmente a base da Fase 2 (getMyCalendars,
+   registrarCalendario, calendarStorageKey, ACTIVE_CALENDAR_STORAGE_KEY).
+   Nada de estrutura nova de dados — só a interface + a troca em si.
+   ========================================================= */
+
+const myCalendarsOverlay = document.getElementById('myCalendarsOverlay');
+const myCalendarsClose = document.getElementById('myCalendarsClose');
+const myCalendarsListContent = document.getElementById('myCalendarsListContent');
+const myCalendarsNewBtn = document.getElementById('myCalendarsNewBtn');
+
+const newCalendarOverlay = document.getElementById('newCalendarOverlay');
+const newCalendarClose = document.getElementById('newCalendarClose');
+const newCalendarName = document.getElementById('newCalendarName');
+const newCalendarType = document.getElementById('newCalendarType');
+const newCalendarCancel = document.getElementById('newCalendarCancel');
+const newCalendarCreate = document.getElementById('newCalendarCreate');
+
+const TIPO_LABELS = { '12x36': '12x36', '5x2': '5x2', 'personalizada': 'Personalizada' };
+
+function renderMyCalendarsList(){
+  const lista = getMyCalendars();
+  const activeId = getActiveCalendarId();
+
+  if(!lista.length){
+    myCalendarsListContent.innerHTML = '<p class="manager-empty">Nenhum calendário ainda.</p>';
+    return;
+  }
+
+  myCalendarsListContent.innerHTML = '';
+  lista.forEach(cal => {
+    const isActive = cal.localId === activeId;
+    const tipoLabel = TIPO_LABELS[cal.type] || cal.type || '--';
+
+    const row = document.createElement('div');
+    row.className = 'manager-item';
+    row.innerHTML = `
+      <div class="manager-item-info">
+        <span class="manager-item-name">${cal.name || '(sem nome)'}</span>
+        <span class="manager-item-meta">${tipoLabel}${isActive ? ' · ● Ativo' : ''}</span>
+      </div>
+      ${isActive ? '' : '<button type="button">Selecionar</button>'}
+    `;
+    if(!isActive){
+      row.querySelector('button').addEventListener('click', () => {
+        switchToCalendar(cal.localId);
+        myCalendarsOverlay.classList.remove('open');
+        showToast(`Agora em: ${cal.name || 'calendário'}`);
+      });
+    }
+    myCalendarsListContent.appendChild(row);
+  });
+}
+
+function openMyCalendarsModal(){
+  renderMyCalendarsList();
+  myCalendarsOverlay.classList.add('open');
+}
+
+myCalendarsClose.addEventListener('click', () => myCalendarsOverlay.classList.remove('open'));
+myCalendarsOverlay.addEventListener('click', (e) => { if(e.target === myCalendarsOverlay) myCalendarsOverlay.classList.remove('open'); });
+
+myCalendarsNewBtn.addEventListener('click', () => {
+  newCalendarName.value = '';
+  newCalendarType.value = '12x36';
+  myCalendarsOverlay.classList.remove('open');
+  newCalendarOverlay.classList.add('open');
+});
+
+newCalendarClose.addEventListener('click', () => newCalendarOverlay.classList.remove('open'));
+newCalendarCancel.addEventListener('click', () => {
+  newCalendarOverlay.classList.remove('open');
+  openMyCalendarsModal();
+});
+newCalendarOverlay.addEventListener('click', (e) => { if(e.target === newCalendarOverlay) newCalendarOverlay.classList.remove('open'); });
+
+newCalendarCreate.addEventListener('click', () => {
+  const nome = newCalendarName.value.trim();
+  if(!nome){
+    showToast('Dê um nome pro calendário');
+    return;
+  }
+  criarNovoCalendarioLocal(nome, newCalendarType.value);
+  newCalendarOverlay.classList.remove('open');
+  showToast('Calendário criado!');
+});
+
+/**
+ * Cria um calendário 100% local e independente. NUNCA copia dados do
+ * calendário ativo anterior — nasce limpo (DEFAULT_CONFIG + overrides/
+ * férias vazios). Não cria documento no Firebase: um calendário local
+ * só ganha cloudId quando (e se) for compartilhado, individualmente.
+ */
+function criarNovoCalendarioLocal(nome, tipo){
+  const novoId = gerarCalendarioId();
+  registrarCalendario(novoId, { name: nome, type: tipo, cloudId: null });
+
+  // Ativa o novo calendário ANTES de gravar seus dados: loadConfig/saveConfig/
+  // saveOverrides/saveFerias sempre operam sobre o calendário ativo
+  // (getActiveCalendarId()) — é isso que garante o isolamento dos dados.
+  localStorage.setItem(ACTIVE_CALENDAR_STORAGE_KEY, novoId);
+
+  const cfgInicial = Object.assign({}, DEFAULT_CONFIG, { tipo: tipo });
+  saveConfig(cfgInicial);
+  saveOverrides({});
+  saveFerias([]);
+
+  isViewOnly = false;
+  viewOnlyOverrides = {};
+  viewOnlyFerias = [];
+  viewOnlyId = null;
+  currentConfig = cfgInicial;
+
+  updateHeader();
+  updateViewOnlyBanner();
+  render();
+}
+
+/**
+ * Troca o calendário ativo. Como todas as funções de storage já resolvem
+ * tudo a partir de getActiveCalendarId() (Fase 2), trocar é: mudar qual
+ * localId está ativo, recarregar o estado em memória a partir dele, e
+ * renderizar de novo — sem reload de página.
+ */
+function switchToCalendar(localId){
+  if(!localId) return;
+  // segue adiante mesmo se já for o ativo, quando vindo do modo visualização
+  // (ex.: botão "Voltar pro meu" precisa sair do modo visualização mesmo
+  // que o calendário ativo já seja tecnicamente "o mesmo").
+  if(localId === getActiveCalendarId() && !isViewOnly) return;
+
+  localStorage.setItem(ACTIVE_CALENDAR_STORAGE_KEY, localId);
+
+  isViewOnly = false;
+  viewOnlyOverrides = {};
+  viewOnlyFerias = [];
+  viewOnlyId = null;
+
+  currentConfig = loadConfig();
+
+  updateHeader();
+  updateViewOnlyBanner();
+  render();
+}
+window.switchToCalendar = switchToCalendar;
 
 /* =========================================================
    Gerenciador de Cronogramas (protegido por senha)
