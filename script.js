@@ -1116,7 +1116,7 @@ function excluirFerias(id){
 }
 
 /* =========================================================
-   Meu cronograma (ID + copiar + compartilhar)
+   Meu ID (ID do calendário ativo + copiar + compartilhar)
    ========================================================= */
 
 const mineOverlay = document.getElementById('mineOverlay');
@@ -1159,7 +1159,7 @@ mineCopy.addEventListener('click', async () => {
 
 mineShare.addEventListener('click', () => {
   if(isViewOnly){
-    showToast('Você está só visualizando — volte pro seu cronograma antes de compartilhar');
+    showToast('Você está só visualizando — volte pro seu calendário antes de compartilhar');
     return;
   }
   mineOverlay.classList.remove('open');
