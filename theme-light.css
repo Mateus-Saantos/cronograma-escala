@@ -16,17 +16,17 @@
      escuras/saturadas para manter contraste legível sobre branco. */
   --folga: #1f9d6c;
   --folga-bg: rgba(31,157,108,0.20);
-  --folga-border: rgba(31,157,108,0.85);
+  --folga-border: rgba(31,157,108,.85);
   --trabalho: #d9662f;
   --trabalho-bg: rgba(217,102,47,0.28);
   --trabalho-border: rgba(217,102,47,0.85);
 
   --folga-past: #86a99a;
   --folga-past-bg: rgba(31,157,108,0.12);
-  --folga-past-border: rgba(31,157,108,0.18);
+  --folga-past-border: rgba(31,157,108,0);
   --trabalho-past: #c99b83;
   --trabalho-past-bg: rgba(217,102,47,0.12);
-  --trabalho-past-border: rgba(217,102,47,0.18);
+  --trabalho-past-border: rgba(217,102,47,0);
 
   --ferias: #a8790a;
   --ferias-bg: rgba(168,121,10,0.12);

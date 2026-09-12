@@ -1244,36 +1244,102 @@ newCalendarCancel.addEventListener('click', () => {
 });
 newCalendarOverlay.addEventListener('click', (e) => { if(e.target === newCalendarOverlay) newCalendarOverlay.classList.remove('open'); });
 
-newCalendarCreate.addEventListener('click', () => {
+newCalendarCreate.addEventListener('click', async () => {
+  console.log('[FASE5-DIAG] Botão "Criar calendário" clicado.');
   const nome = newCalendarName.value.trim();
   if(!nome){
     showToast('Dê um nome pro calendário');
     return;
   }
-  criarNovoCalendarioLocal(nome, newCalendarType.value);
-  newCalendarOverlay.classList.remove('open');
-  showToast('Calendário criado!');
+  newCalendarCreate.disabled = true;
+  showToast('Criando calendário...');
+  const ok = await criarNovoCalendarioLocal(nome, newCalendarType.value);
+  console.log('[FASE5-DIAG] criarNovoCalendarioLocal() retornou:', ok, '| getCloudId() agora =', getCloudId());
+  newCalendarCreate.disabled = false;
+  if(ok){
+    newCalendarOverlay.classList.remove('open');
+    showToast('Calendário criado!');
+  }
+  // se falhou, criarNovoCalendarioLocal() já mostrou o toast de erro
+  // e não fechamos o modal — o usuário pode tentar de novo sem perder
+  // o que digitou.
 });
 
 /**
- * Cria um calendário 100% local e independente. NUNCA copia dados do
- * calendário ativo anterior — nasce limpo (DEFAULT_CONFIG + overrides/
- * férias vazios). Não cria documento no Firebase: um calendário local
- * só ganha cloudId quando (e se) for compartilhado, individualmente.
+ * Cria um calendário novo — local E remoto. NUNCA copia dados do calendário
+ * ativo anterior: nasce limpo (DEFAULT_CONFIG + overrides/férias vazios).
+ *
+ * FASE 5: todo calendário novo precisa nascer com cloudId válido e seu
+ * documento já existente no Firestore. Por isso o documento remoto é criado
+ * ANTES de qualquer coisa ser gravada/ativada localmente — se a criação
+ * remota falhar, nada muda no dispositivo: sem cloudId falso, sem
+ * calendário "fantasma" registrado ou ativado.
+ *
+ * Retorna true se criou com sucesso, false se falhou (já avisa o usuário).
  */
-function criarNovoCalendarioLocal(nome, tipo){
-  const novoId = gerarCalendarioId();
-  registrarCalendario(novoId, { name: nome, type: tipo, cloudId: null });
+async function criarNovoCalendarioLocal(nome, tipo){
+  console.log('[FASE5-DIAG] criarNovoCalendarioLocal() chamada com', { nome, tipo });
+  console.log('[FASE5-DIAG] cloudDisponivel() =', cloudDisponivel(), '| window.firebaseCronograma =', window.firebaseCronograma);
 
-  // Ativa o novo calendário ANTES de gravar seus dados: loadConfig/saveConfig/
-  // saveOverrides/saveFerias sempre operam sobre o calendário ativo
-  // (getActiveCalendarId()) — é isso que garante o isolamento dos dados.
-  localStorage.setItem(ACTIVE_CALENDAR_STORAGE_KEY, novoId);
+  if(!cloudDisponivel()){
+    console.warn('[FASE5-DIAG] Abortando: window.firebaseCronograma não está disponível (firebase.js não carregou ou falhou).');
+    showToast('Sem conexão com o servidor — não é possível criar um calendário agora');
+    return false;
+  }
 
   const cfgInicial = Object.assign({}, DEFAULT_CONFIG, { tipo: tipo });
+
+  // 1) Cria o documento no Firestore PRIMEIRO. Sem 2º argumento pra
+  //    salvarCronograma(): firebase.js gera um cloudId novo (gerarId()),
+  //    o mesmo mecanismo já usado pelo onboarding original — não criei
+  //    um segundo sistema de geração de ID.
+  let cloudId = null;
+  try{
+    console.log('[FASE5-DIAG] Chamando window.firebaseCronograma.salvarCronograma()...');
+    cloudId = await window.firebaseCronograma.salvarCronograma(
+      { config: cfgInicial, overrides: {}, ferias: [] }
+    );
+    console.log('[FASE5-DIAG] salvarCronograma() retornou cloudId =', cloudId);
+  }catch(e){
+    console.error('[FASE5-DIAG] salvarCronograma() lançou um erro:', e);
+    console.error('Erro ao criar calendário no Firebase:', e);
+    showToast('Não foi possível criar o calendário agora. Tente novamente.');
+    return false;
+  }
+
+  if(!cloudId){
+    console.error('salvarCronograma() não retornou um cloudId válido ao criar calendário.');
+    showToast('Não foi possível criar o calendário agora. Tente novamente.');
+    return false;
+  }
+
+  // 2) Só a partir daqui o calendário passa a existir de verdade — local
+  //    e remotamente com o MESMO id. Nada disso roda se o passo 1 falhar.
+  const novoId = gerarCalendarioId();
+  registrarCalendario(novoId, { name: nome, type: tipo, cloudId: cloudId });
+
+  // Ativa o novo calendário ANTES de gravar seus dados: loadConfig/saveConfig/
+  // saveOverrides/saveFerias/setCloudId sempre operam sobre o calendário
+  // ativo (getActiveCalendarId()) — é isso que garante o isolamento dos dados.
+  localStorage.setItem(ACTIVE_CALENDAR_STORAGE_KEY, novoId);
+
   saveConfig(cfgInicial);
   saveOverrides({});
   saveFerias([]);
+  setCloudId(cloudId); // grava a chave namespaced escala-cloud-id::{novoId}
+
+  try{
+    await window.firebaseCronograma.salvarIndice(cloudId, {
+      nome: nome,
+      tipo: tipo,
+      atualizadoEm: Date.now()
+    });
+  }catch(e){
+    // O calendário já existe (local + remoto) nesse ponto — o índice é só
+    // um resumo auxiliar pro Gerenciador, uma falha aqui não invalida a
+    // criação. Só registra no console, sem desfazer nada.
+    console.error('Erro ao atualizar índice do novo calendário:', e);
+  }
 
   isViewOnly = false;
   viewOnlyOverrides = {};
@@ -1284,6 +1350,8 @@ function criarNovoCalendarioLocal(nome, tipo){
   updateHeader();
   updateViewOnlyBanner();
   render();
+
+  return true;
 }
 
 /**
