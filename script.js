@@ -9,6 +9,7 @@ const OVERRIDES_STORAGE_KEY = 'escala-overrides-2026';
 const CONFIG_STORAGE_KEY = 'escala-config-v1';
 const CLOUD_ID_STORAGE_KEY = 'escala-cloud-id';
 const FERIAS_STORAGE_KEY = 'escala-ferias';
+const DIRTY_STORAGE_KEY = 'escala-dirty'; // sempre usado via calendarStorageKey() — namespaced por localId
 const THEME_STORAGE_KEY = 'escala-tema'; // preferência só do dispositivo, nunca vai pro Firebase
 
 // FASE 2: registro de "Meus Calendários" deste dispositivo + qual está ativo.
@@ -297,6 +298,45 @@ function formatFeriasRange(f){
   return `${fmt(inicio)} até ${fmt(fim)}`;
 }
 
+/* ---------- FASE 6: estado "alterações não salvas" ----------
+   Um único flag por calendário (namespaced por localId, igual a config/
+   overrides/férias), indicando "existe alteração local desde a última
+   vez que este calendário foi marcado como salvo". NÃO envolve o
+   Firebase de forma nenhuma nesta fase — é só leitura/escrita local. */
+
+function hasUnsavedChanges(){
+  const id = getActiveCalendarId();
+  if(!id) return false;
+  return localStorage.getItem(calendarStorageKey(DIRTY_STORAGE_KEY, id)) === '1';
+}
+
+function markCalendarAsDirty(){
+  const id = getActiveCalendarId();
+  if(!id) return;
+  localStorage.setItem(calendarStorageKey(DIRTY_STORAGE_KEY, id), '1');
+  updateDirtyIndicator();
+}
+
+function clearCalendarDirty(){
+  const id = getActiveCalendarId();
+  if(!id) return;
+  localStorage.setItem(calendarStorageKey(DIRTY_STORAGE_KEY, id), '0');
+  updateDirtyIndicator();
+}
+
+// Expostas em window pelo mesmo motivo das outras funções de leitura já
+// expostas (getCurrentCalendar, getMyCalendars) — ponto de acesso pronto
+// pro futuro botão Salvar / Ctrl+S consultarem e limparem esse estado.
+window.hasUnsavedChanges = hasUnsavedChanges;
+window.markCalendarAsDirty = markCalendarAsDirty;
+window.clearCalendarDirty = clearCalendarDirty;
+
+function updateDirtyIndicator(){
+  const el = document.getElementById('dirtyIndicator');
+  if(!el) return;
+  el.style.display = hasUnsavedChanges() ? 'inline' : 'none';
+}
+
 /* ---------- Persistência: ID do cronograma na nuvem ----------
    Uma vez que o usuário compartilha pela primeira vez, guardamos
    esse ID localmente. Todo salvamento seguinte atualiza o MESMO
@@ -451,6 +491,7 @@ async function loadCronogramaById(id, asOwner){
     setCloudId(id); // também atualiza o cloudId no registro (ver setCloudId)
     const activeId = getActiveCalendarId();
     if(activeId) registrarCalendario(activeId, { name: currentConfig.nome || '', type: currentConfig.tipo });
+    clearCalendarDirty(); // dado acabou de vir do Firebase — está sincronizado por definição
   }else{
     isViewOnly = true;
     viewOnlyId = id;
@@ -584,6 +625,8 @@ function updateHeader(){
   eyebrow.textContent = labels[currentConfig.tipo] || 'Escala';
 
   document.getElementById('yearBtn').textContent = displayYear;
+
+  updateDirtyIndicator();
 }
 
 /* =========================================================
@@ -761,24 +804,33 @@ modalSave.addEventListener('click', () => {
   const status = modalStatus.value;
   const comment = modalComment.value.trim();
 
+  const antes = overrides[currentKey] ? JSON.stringify(overrides[currentKey]) : null;
+
   if(status === currentAutoType && comment === ''){
     delete overrides[currentKey];
   }else{
     overrides[currentKey] = { status, comment };
   }
+
+  const depois = overrides[currentKey] ? JSON.stringify(overrides[currentKey]) : null;
+  const mudouDeVerdade = antes !== depois;
+
   saveOverrides(overrides);
   closeDayModal();
   render();
+  if(mudouDeVerdade) markCalendarAsDirty();
   syncToCloud();
 });
 
 modalReset.addEventListener('click', () => {
   if(!currentKey || isViewOnly) return;
   const overrides = loadOverrides();
+  const haviaEdicaoManual = !!overrides[currentKey];
   delete overrides[currentKey];
   saveOverrides(overrides);
   closeDayModal();
   render();
+  if(haviaEdicaoManual) markCalendarAsDirty();
   syncToCloud();
 });
 
@@ -890,6 +942,7 @@ settingsSave.addEventListener('click', async () => {
       saveFerias([]);
       const activeIdCriacao = getActiveCalendarId();
       if(activeIdCriacao) registrarCalendario(activeIdCriacao, { name: currentConfig.nome || '', type: currentConfig.tipo });
+      clearCalendarDirty(); // acabou de nascer já sincronizado com o Firebase
       await window.firebaseCronograma.salvarIndice(novoId, {
         nome: currentConfig.nome || '(sem nome)',
         tipo: currentConfig.tipo,
@@ -907,8 +960,10 @@ settingsSave.addEventListener('click', async () => {
     return;
   }
 
+  const configAnterior = JSON.stringify(currentConfig);
   currentConfig = newConfig;
   saveConfig(currentConfig);
+  if(JSON.stringify(currentConfig) !== configAnterior) markCalendarAsDirty();
   // FASE 3: "nome do calendário" (mostrado em Meus Calendários) e "nome da
   // pessoa" (currentConfig.nome, mostrado no cabeçalho) são conceitos
   // diferentes agora. Editar configurações da escala não deve renomear
@@ -1089,6 +1144,7 @@ feriasFormSave.addEventListener('click', () => {
   }
   const dias = Math.max(1, parseInt(feriasQuantidade.value, 10) || 1);
   const lista = loadFerias();
+  const listaAntes = JSON.stringify(lista);
 
   if(feriasEditandoId){
     const idx = lista.findIndex(f => f.id === feriasEditandoId);
@@ -1099,18 +1155,24 @@ feriasFormSave.addEventListener('click', () => {
     lista.push({ id: gerarFeriasId(), dataInicio: feriasDataInicio.value, quantidadeDias: dias });
   }
 
+  const mudouDeVerdade = JSON.stringify(lista) !== listaAntes;
+
   saveFerias(lista);
   showFeriasList();
   render();
+  if(mudouDeVerdade) markCalendarAsDirty();
   showToast('Férias salvas!');
   syncToCloud();
 });
 
 function excluirFerias(id){
-  const lista = loadFerias().filter(f => f.id !== id);
+  const listaAntes = loadFerias();
+  const lista = listaAntes.filter(f => f.id !== id);
+  const mudouDeVerdade = lista.length !== listaAntes.length;
   saveFerias(lista);
   renderFeriasList();
   render();
+  if(mudouDeVerdade) markCalendarAsDirty();
   showToast('Férias excluídas');
   syncToCloud();
 }
@@ -1327,6 +1389,7 @@ async function criarNovoCalendarioLocal(nome, tipo){
   saveOverrides({});
   saveFerias([]);
   setCloudId(cloudId); // grava a chave namespaced escala-cloud-id::{novoId}
+  clearCalendarDirty(); // acabou de nascer já sincronizado com o Firebase
 
   try{
     await window.firebaseCronograma.salvarIndice(cloudId, {

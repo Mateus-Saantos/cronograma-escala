@@ -7,6 +7,25 @@ body{
   -webkit-font-smoothing: antialiased
 }
 
+.title-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 6px;
+}
+
+.title-wrap h1 {
+  margin: 0;
+}
+
+.title-wrap .dirty-indicator {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+}
 .menu_superior {
   padding-top: 20px;
   position: fixed;
