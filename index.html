@@ -28,16 +28,11 @@
 
       <header>
         <div class="eyebrow">Escala</div>
-        <div class="title-wrap"> 
-          <span id="dirtyIndicator" 
-          class="dirty-indicator" 
-          style="display:none; 
-          color:var(--muted);" 
-          aria-label="Alterações não salvas" 
-          title="Alterações não salvas"> * </span> 
-          <h1>Nome do Usuário</h1> 
+        <div class="title-wrap">
+          <h1>Nome do Usuário</h1>
+          <button id="saveButton" class="save-button-header" type="button" aria-label="Salvar alterações" style="display:none;">Salvar</button>
         </div>
-        
+
         <div class="sub">
           Janeiro — Dezembro de
           <span class="year-wrap">
@@ -233,6 +228,7 @@
         <div id="myCalendarsListContent" class="manager-list"></div>
         <div class="modal-actions">
           <button id="myCalendarsNewBtn" type="button" class="btn-save">+ Novo calendário</button>
+          <button id="myCalendarsLoadBtn" type="button" class="btn-ghost">Carregar calendário</button>
         </div>
       </div>
     </div>

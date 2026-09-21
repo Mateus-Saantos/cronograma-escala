@@ -19,12 +19,23 @@ body{
   margin: 0;
 }
 
-.title-wrap .dirty-indicator {
-  position: static !important;
-  left: auto !important;
-  right: auto !important;
-  top: auto !important;
-  transform: none !important;
+.save-button-header{
+  background: var(--folga);
+  color: var(--on-accent-folga);
+  border: none;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.save-button-header:disabled{
+  opacity: 0.7;
+  cursor: default;
 }
 .menu_superior {
   padding-top: 20px;

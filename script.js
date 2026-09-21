@@ -10,6 +10,7 @@ const CONFIG_STORAGE_KEY = 'escala-config-v1';
 const CLOUD_ID_STORAGE_KEY = 'escala-cloud-id';
 const FERIAS_STORAGE_KEY = 'escala-ferias';
 const DIRTY_STORAGE_KEY = 'escala-dirty'; // sempre usado via calendarStorageKey() — namespaced por localId
+const SYNCED_STATE_STORAGE_KEY = 'escala-synced-state'; // último {config,overrides,ferias} confirmado no Firebase
 const THEME_STORAGE_KEY = 'escala-tema'; // preferência só do dispositivo, nunca vai pro Firebase
 
 // FASE 2: registro de "Meus Calendários" deste dispositivo + qual está ativo.
@@ -331,11 +332,166 @@ window.hasUnsavedChanges = hasUnsavedChanges;
 window.markCalendarAsDirty = markCalendarAsDirty;
 window.clearCalendarDirty = clearCalendarDirty;
 
+/* FASE 8: o indicador visual "*" foi removido. O próprio botão Salvar,
+   agora dentro do cabeçalho, cumpre esse papel — aparece quando existem
+   alterações não salvas, some quando não existem. A lógica de dirty em
+   si (hasUnsavedChanges/markCalendarAsDirty/clearCalendarDirty) não
+   mudou — só quem "escuta" essa mudança agora é o botão, não um "*". */
 function updateDirtyIndicator(){
-  const el = document.getElementById('dirtyIndicator');
-  if(!el) return;
-  el.style.display = hasUnsavedChanges() ? 'inline' : 'none';
+  const btn = document.getElementById('saveButton');
+  if(!btn) return;
+  const dirty = hasUnsavedChanges();
+  btn.style.display = dirty ? '' : 'none';
+  if(dirty && !btn.disabled) btn.textContent = 'Salvar';
 }
+
+/* ---------- FASE 7: estado sincronizado ----------
+   Representa o último {config, overrides, ferias} que sabemos, com
+   certeza, que corresponde ao que está gravado no Firestore pra este
+   calendário — atualizado só quando uma escrita remota é confirmada
+   com sucesso (criação, carregamento como dono, compartilhamento, ou
+   um "Salvar" bem-sucedido). NUNCA atualizado só porque o usuário
+   editou algo localmente. Namespaced por localId, igual a tudo mais. */
+
+function loadSyncedState(){
+  try{
+    const raw = localStorage.getItem(calendarStorageKey(SYNCED_STATE_STORAGE_KEY, getActiveCalendarId()));
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){
+    console.error('Erro ao ler estado sincronizado:', e);
+    return null;
+  }
+}
+
+function saveSyncedState(estado){
+  try{
+    localStorage.setItem(calendarStorageKey(SYNCED_STATE_STORAGE_KEY, getActiveCalendarId()), JSON.stringify(estado));
+  }catch(e){
+    console.error('Erro ao salvar estado sincronizado:', e);
+  }
+}
+
+/* ---------- FASE 7: salvamento explícito e incremental ----------
+   Só roda quando o usuário pede (botão Salvar / Ctrl+S) — nunca
+   automaticamente após uma edição. Compara o estado local atual com
+   o último estado sincronizado conhecido e manda pro Firestore SÓ os
+   blocos (config/overrides/ferias) que realmente mudaram, via
+   updateDoc(). Se nada mudou, não escreve nada. */
+
+let salvandoEmAndamento = false;
+
+function updateSaveButton(estado){
+  const btn = document.getElementById('saveButton');
+  if(!btn) return;
+  clearTimeout(updateSaveButton._t);
+  if(estado === 'saving'){
+    btn.style.display = '';
+    btn.textContent = 'Salvando...';
+    btn.disabled = true;
+  }else if(estado === 'saved'){
+    btn.style.display = '';
+    btn.textContent = 'Salvo';
+    btn.disabled = true;
+    // Confirmação breve e discreta — depois disso o botão SOME (não só
+    // muda de texto), já que não existem mais alterações pendentes.
+    updateSaveButton._t = setTimeout(() => {
+      btn.disabled = false;
+      updateDirtyIndicator(); // dirty já está false aqui -> esconde o botão
+    }, 1200);
+  }else if(estado === 'error'){
+    // Falha: o botão continua visível e clicável — o dirty NÃO foi limpo.
+    btn.style.display = '';
+    btn.textContent = 'Tentar novamente';
+    btn.disabled = false;
+  }else{
+    // 'idle': reaplica a visibilidade real (some se não há mais nada
+    // pendente, ex.: ao trocar de calendário).
+    btn.disabled = false;
+    updateDirtyIndicator();
+  }
+}
+
+async function salvarAlteracoes(){
+  if(salvandoEmAndamento) return; // ignora cliques/Ctrl+S repetidos durante um salvamento em curso
+
+  const cloudId = getCloudId();
+  if(!cloudId){
+    showToast('Este calendário ainda não tem um documento remoto pra salvar.');
+    return;
+  }
+  if(!cloudDisponivel()){
+    showToast('Não foi possível salvar agora. Suas alterações continuam neste dispositivo.');
+    return;
+  }
+
+  salvandoEmAndamento = true;
+  updateSaveButton('saving');
+
+  try{
+    const atual = {
+      config: loadConfig(),
+      overrides: loadOverrides(),
+      ferias: loadFerias()
+    };
+    const sincronizado = loadSyncedState();
+
+    let camposParaEnviar = atual;   // usado no fallback (documento inteiro)
+    let usarUpdateParcial = false;
+
+    if(sincronizado){
+      const alterados = {};
+      if(JSON.stringify(atual.config) !== JSON.stringify(sincronizado.config)) alterados.config = atual.config;
+      if(JSON.stringify(atual.overrides) !== JSON.stringify(sincronizado.overrides)) alterados.overrides = atual.overrides;
+      if(JSON.stringify(atual.ferias) !== JSON.stringify(sincronizado.ferias)) alterados.ferias = atual.ferias;
+
+      if(Object.keys(alterados).length === 0){
+        // Nada mudou de verdade desde o último estado sincronizado —
+        // não faz nenhuma escrita no Firestore.
+        clearCalendarDirty();
+        updateSaveButton('idle');
+        showToast('Nada para salvar');
+        return;
+      }
+
+      camposParaEnviar = alterados;
+      usarUpdateParcial = true;
+    }
+    // Se "sincronizado" for null (calendário criado/carregado antes desta
+    // fase, por exemplo — não deveria acontecer em uso normal, mas é
+    // possível), não temos uma base confiável pra calcular um diff. Nesse
+    // caso único, grava o documento inteiro pelo mesmo mecanismo já usado
+    // na criação (salvarCronograma/setDoc), em vez de arriscar um
+    // updateDoc parcial contra um conteúdo remoto que não conhecemos.
+
+    if(usarUpdateParcial){
+      await window.firebaseCronograma.atualizarCronograma(cloudId, camposParaEnviar);
+    }else{
+      await window.firebaseCronograma.salvarCronograma(camposParaEnviar, cloudId);
+    }
+
+    saveSyncedState(atual); // os 3 blocos batem com o remoto agora, alterados ou não
+    clearCalendarDirty();
+    updateSaveButton('saved');
+  }catch(e){
+    console.error('Erro ao salvar alterações:', e);
+    updateSaveButton('error');
+    showToast('Não foi possível salvar agora. Suas alterações continuam neste dispositivo.');
+  }finally{
+    salvandoEmAndamento = false;
+  }
+}
+
+const saveButtonEl = document.getElementById('saveButton');
+if(saveButtonEl){
+  saveButtonEl.addEventListener('click', salvarAlteracoes);
+}
+
+document.addEventListener('keydown', (e) => {
+  const teclaSalvar = (e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey);
+  if(!teclaSalvar) return;
+  e.preventDefault(); // impede a caixa "Salvar página como..." do navegador
+  salvarAlteracoes();
+});
 
 /* ---------- Persistência: ID do cronograma na nuvem ----------
    Uma vez que o usuário compartilha pela primeira vez, guardamos
@@ -363,30 +519,9 @@ function cloudDisponivel(){
   return typeof window.firebaseCronograma !== 'undefined';
 }
 
-/* Envia a config + overrides atuais pro Firestore, reaproveitando o
-   mesmo ID já existente. Não faz nada se o usuário ainda não tiver
-   compartilhado nenhuma vez (não existe ID ainda). */
-async function syncToCloud(){
-  const cloudId = getCloudId();
-  if(!cloudId) return; // nada compartilhado ainda, não há o que sincronizar
-  if(!cloudDisponivel()){
-    console.warn('Firebase indisponível — alteração ficou salva só localmente.');
-    return;
-  }
-  try{
-    await window.firebaseCronograma.salvarCronograma(
-      { config: currentConfig, overrides: loadOverrides(), ferias: loadFerias() },
-      cloudId
-    );
-    await window.firebaseCronograma.salvarIndice(cloudId, {
-      nome: currentConfig.nome || '(sem nome)',
-      tipo: currentConfig.tipo,
-      atualizadoEm: Date.now()
-    });
-  }catch(e){
-    console.error('Erro ao sincronizar com a nuvem:', e);
-  }
-}
+/* FASE 7: a antiga syncToCloud() (salvamento automático a cada edição)
+   foi removida — substituída pelo salvamento explícito e incremental
+   em salvarAlteracoes() (ver mais abaixo, perto do botão Salvar). */
 
 /* SHA-256 do texto em hexadecimal — usado só pra comparar a senha do
    Gerenciador com o hash salvo no Firestore. A senha em si nunca é
@@ -474,7 +609,7 @@ async function loadCronogramaById(id, asOwner){
     console.error('Erro ao carregar cronograma:', e);
   }
   if(!cloudData || !cloudData.config){
-    showToast('Cronograma não encontrado');
+    showToast('Calendário não encontrado. Verifique o ID e tente novamente.');
     return false;
   }
 
@@ -485,12 +620,30 @@ async function loadCronogramaById(id, asOwner){
     viewOnlyOverrides = {};
     viewOnlyFerias = [];
     viewOnlyId = null;
+
+    // FASE 8: decide se isto é "atualizar um calendário que já tenho neste
+    // dispositivo" (mesmo cloudId já presente no registry, ou o calendário
+    // ativo ainda está vazio/nunca usado — caso do primeiro acesso) ou
+    // "adicionar um calendário diferente" — que precisa do seu PRÓPRIO
+    // localId, sem sobrescrever o que já estava ativo.
+    const jaExistente = getMyCalendars().find(c => c.cloudId === id);
+    const ativoAindaVazio = !getCloudId() && !hasStoredConfig();
+    let localId;
+    if(jaExistente){
+      localId = jaExistente.localId;
+    }else if(ativoAindaVazio){
+      localId = getActiveCalendarId();
+    }else{
+      localId = gerarCalendarioId();
+    }
+    localStorage.setItem(ACTIVE_CALENDAR_STORAGE_KEY, localId);
+
     saveConfig(currentConfig);
-    if(cloudData.overrides) saveOverrides(cloudData.overrides);
+    saveOverrides(cloudData.overrides || {});
     saveFerias(cloudData.ferias || []);
     setCloudId(id); // também atualiza o cloudId no registro (ver setCloudId)
-    const activeId = getActiveCalendarId();
-    if(activeId) registrarCalendario(activeId, { name: currentConfig.nome || '', type: currentConfig.tipo });
+    registrarCalendario(localId, { name: currentConfig.nome || '', type: currentConfig.tipo, cloudId: id });
+    saveSyncedState({ config: currentConfig, overrides: cloudData.overrides || {}, ferias: cloudData.ferias || [] });
     clearCalendarDirty(); // dado acabou de vir do Firebase — está sincronizado por definição
   }else{
     isViewOnly = true;
@@ -627,6 +780,7 @@ function updateHeader(){
   document.getElementById('yearBtn').textContent = displayYear;
 
   updateDirtyIndicator();
+  updateSaveButton('idle');
 }
 
 /* =========================================================
@@ -819,7 +973,6 @@ modalSave.addEventListener('click', () => {
   closeDayModal();
   render();
   if(mudouDeVerdade) markCalendarAsDirty();
-  syncToCloud();
 });
 
 modalReset.addEventListener('click', () => {
@@ -831,7 +984,6 @@ modalReset.addEventListener('click', () => {
   closeDayModal();
   render();
   if(haviaEdicaoManual) markCalendarAsDirty();
-  syncToCloud();
 });
 
 /* =========================================================
@@ -891,14 +1043,34 @@ function closeSettings(){
   settingsOverlay.classList.remove('open');
 }
 
-settingsLoadExisting.addEventListener('click', async () => {
-  const id = window.prompt('Cole aqui o ID do cronograma que você recebeu:');
-  if(!id) return;
-  const ok = await loadCronogramaById(id.trim().toUpperCase(), true);
-  if(ok){
-    closeSettings();
-    showToast('Cronograma carregado!');
+/* FASE 8: fluxo único de "carregar calendário existente pelo ID", usado
+   tanto no primeiro acesso (Configurações → "Já tenho um ID") quanto em
+   Meus Calendários → "Carregar calendário". Não duplicar esta lógica. */
+async function carregarCalendarioPorPrompt(){
+  const idDigitado = window.prompt('Cole aqui o ID do calendário que você recebeu:');
+  if(!idDigitado) return false;
+  const id = idDigitado.trim().toUpperCase();
+
+  // Calendário já presente neste dispositivo? Não duplica — oferece abrir.
+  const existente = getMyCalendars().find(c => c.cloudId === id);
+  if(existente){
+    const abrir = window.confirm('Este calendário já está neste dispositivo.\n\nDeseja abri-lo agora?');
+    if(abrir){
+      switchToCalendar(existente.localId);
+      showToast(`Calendário aberto: ${existente.name || 'sem nome'}`);
+      return true;
+    }
+    return false;
   }
+
+  const ok = await loadCronogramaById(id, true);
+  if(ok) showToast('Calendário carregado!');
+  return ok; // se não encontrado, loadCronogramaById já mostrou o toast de erro
+}
+
+settingsLoadExisting.addEventListener('click', async () => {
+  const ok = await carregarCalendarioPorPrompt();
+  if(ok) closeSettings();
 });
 
 cfgTipo.addEventListener('change', updateSettingsVisibility);
@@ -942,6 +1114,7 @@ settingsSave.addEventListener('click', async () => {
       saveFerias([]);
       const activeIdCriacao = getActiveCalendarId();
       if(activeIdCriacao) registrarCalendario(activeIdCriacao, { name: currentConfig.nome || '', type: currentConfig.tipo });
+      saveSyncedState({ config: currentConfig, overrides: {}, ferias: [] });
       clearCalendarDirty(); // acabou de nascer já sincronizado com o Firebase
       await window.firebaseCronograma.salvarIndice(novoId, {
         nome: currentConfig.nome || '(sem nome)',
@@ -975,7 +1148,6 @@ settingsSave.addEventListener('click', async () => {
   closeSettings();
   render();
   showToast('Configurações salvas!');
-  syncToCloud();
 });
 
 /* =========================================================
@@ -990,11 +1162,17 @@ async function shareSchedule(){
 
   showToast('Gerando link...');
   try{
+    const dadosAtuais = { config: currentConfig, overrides: loadOverrides(), ferias: loadFerias() };
     const cloudId = await window.firebaseCronograma.salvarCronograma(
-      { config: currentConfig, overrides: loadOverrides(), ferias: loadFerias() },
+      dadosAtuais,
       getCloudId() // reaproveita o ID se já existir; se não, o firebase.js gera um novo
     );
     setCloudId(cloudId);
+    // FASE 7: compartilhar grava o documento inteiro com o estado atual —
+    // depois disso, local e remoto batem, então o calendário passa a
+    // contar como sincronizado (o * some, se estivesse presente).
+    saveSyncedState(dadosAtuais);
+    clearCalendarDirty();
 
     const url = `${window.location.origin}${window.location.pathname}?id=${cloudId}`;
     try{
@@ -1162,7 +1340,6 @@ feriasFormSave.addEventListener('click', () => {
   render();
   if(mudouDeVerdade) markCalendarAsDirty();
   showToast('Férias salvas!');
-  syncToCloud();
 });
 
 function excluirFerias(id){
@@ -1174,7 +1351,6 @@ function excluirFerias(id){
   render();
   if(mudouDeVerdade) markCalendarAsDirty();
   showToast('Férias excluídas');
-  syncToCloud();
 }
 
 /* =========================================================
@@ -1240,6 +1416,7 @@ const myCalendarsOverlay = document.getElementById('myCalendarsOverlay');
 const myCalendarsClose = document.getElementById('myCalendarsClose');
 const myCalendarsListContent = document.getElementById('myCalendarsListContent');
 const myCalendarsNewBtn = document.getElementById('myCalendarsNewBtn');
+const myCalendarsLoadBtn = document.getElementById('myCalendarsLoadBtn');
 
 const newCalendarOverlay = document.getElementById('newCalendarOverlay');
 const newCalendarClose = document.getElementById('newCalendarClose');
@@ -1299,6 +1476,17 @@ myCalendarsNewBtn.addEventListener('click', () => {
   newCalendarOverlay.classList.add('open');
 });
 
+myCalendarsLoadBtn.addEventListener('click', async () => {
+  const ok = await carregarCalendarioPorPrompt();
+  if(ok){
+    myCalendarsOverlay.classList.remove('open');
+  }else{
+    // recarrega a lista mesmo em caso de "cancelar"/"não encontrado",
+    // caso o usuário reabra o fluxo de novo em seguida
+    renderMyCalendarsList();
+  }
+});
+
 newCalendarClose.addEventListener('click', () => newCalendarOverlay.classList.remove('open'));
 newCalendarCancel.addEventListener('click', () => {
   newCalendarOverlay.classList.remove('open');
@@ -1307,7 +1495,6 @@ newCalendarCancel.addEventListener('click', () => {
 newCalendarOverlay.addEventListener('click', (e) => { if(e.target === newCalendarOverlay) newCalendarOverlay.classList.remove('open'); });
 
 newCalendarCreate.addEventListener('click', async () => {
-  console.log('[FASE5-DIAG] Botão "Criar calendário" clicado.');
   const nome = newCalendarName.value.trim();
   if(!nome){
     showToast('Dê um nome pro calendário');
@@ -1316,7 +1503,6 @@ newCalendarCreate.addEventListener('click', async () => {
   newCalendarCreate.disabled = true;
   showToast('Criando calendário...');
   const ok = await criarNovoCalendarioLocal(nome, newCalendarType.value);
-  console.log('[FASE5-DIAG] criarNovoCalendarioLocal() retornou:', ok, '| getCloudId() agora =', getCloudId());
   newCalendarCreate.disabled = false;
   if(ok){
     newCalendarOverlay.classList.remove('open');
@@ -1340,11 +1526,7 @@ newCalendarCreate.addEventListener('click', async () => {
  * Retorna true se criou com sucesso, false se falhou (já avisa o usuário).
  */
 async function criarNovoCalendarioLocal(nome, tipo){
-  console.log('[FASE5-DIAG] criarNovoCalendarioLocal() chamada com', { nome, tipo });
-  console.log('[FASE5-DIAG] cloudDisponivel() =', cloudDisponivel(), '| window.firebaseCronograma =', window.firebaseCronograma);
-
   if(!cloudDisponivel()){
-    console.warn('[FASE5-DIAG] Abortando: window.firebaseCronograma não está disponível (firebase.js não carregou ou falhou).');
     showToast('Sem conexão com o servidor — não é possível criar um calendário agora');
     return false;
   }
@@ -1357,13 +1539,10 @@ async function criarNovoCalendarioLocal(nome, tipo){
   //    um segundo sistema de geração de ID.
   let cloudId = null;
   try{
-    console.log('[FASE5-DIAG] Chamando window.firebaseCronograma.salvarCronograma()...');
     cloudId = await window.firebaseCronograma.salvarCronograma(
       { config: cfgInicial, overrides: {}, ferias: [] }
     );
-    console.log('[FASE5-DIAG] salvarCronograma() retornou cloudId =', cloudId);
   }catch(e){
-    console.error('[FASE5-DIAG] salvarCronograma() lançou um erro:', e);
     console.error('Erro ao criar calendário no Firebase:', e);
     showToast('Não foi possível criar o calendário agora. Tente novamente.');
     return false;
@@ -1389,6 +1568,7 @@ async function criarNovoCalendarioLocal(nome, tipo){
   saveOverrides({});
   saveFerias([]);
   setCloudId(cloudId); // grava a chave namespaced escala-cloud-id::{novoId}
+  saveSyncedState({ config: cfgInicial, overrides: {}, ferias: [] });
   clearCalendarDirty(); // acabou de nascer já sincronizado com o Firebase
 
   try{
