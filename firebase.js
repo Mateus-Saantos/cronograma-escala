@@ -6,7 +6,7 @@ import { initializeApp }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 
 // Firestore vem de um pacote separado do firebase-app.js
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs }
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -78,6 +78,16 @@ async function buscarHashSenhaGerenciador(){
   return snap.exists() ? (snap.data().senhaHash || null) : null;
 }
 
+/**
+ * Atualiza SOMENTE os campos informados de um cronograma já existente
+ * (ex.: só "config" e "ferias", sem tocar em "overrides"). Usa updateDoc,
+ * que — diferente de setDoc — não substitui o documento inteiro, só os
+ * campos passados em "campos". Falha se o documento não existir.
+ */
+async function atualizarCronograma(id, campos){
+  await updateDoc(doc(db, "cronogramas", id), campos);
+}
+
 // Exposto em window pois script.js é carregado como script separado
 // (não usa import/export entre os dois arquivos).
 window.firebaseCronograma = {
@@ -86,5 +96,6 @@ window.firebaseCronograma = {
   gerarId,
   salvarIndice,
   listarIndice,
-  buscarHashSenhaGerenciador
+  buscarHashSenhaGerenciador,
+  atualizarCronograma
 };
