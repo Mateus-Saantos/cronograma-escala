@@ -1,299 +1,276 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>
-  // Aplica o tema salvo ANTES do CSS carregar, pra não piscar o tema errado.
-  (function(){
-    var tema = localStorage.getItem('escala-tema') || 'dark';
-    document.write('<link id="themeStylesheet" rel="stylesheet" href="theme-' + tema + '.css">');
-  })();
-</script>
-<link rel="stylesheet" href="style.css">
-<title>Cronograma de Escala</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // Aplica o tema salvo ANTES do CSS carregar, pra não piscar o tema errado.
+    (function () {
+      var tema = localStorage.getItem('escala-tema') || 'dark';
+      document.write('<link id="themeStylesheet" rel="stylesheet" href="theme-' + tema + '.css">');
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+  <title>Cronograma de Escala</title>
 </head>
-  <body>
-    <div class="menu_superior">
-      <div class="menu-wrap">
-        <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menu">⋮</button>
-        <div id="menuDropdown" class="menu-dropdown">
-          <button type="button" data-action="config">Configurações</button>
-          <button type="button" data-action="ferias">Férias planejadas</button>
-          <button type="button" data-action="mine">Meu ID</button>
-          <button type="button" data-action="calendars">Meus calendários</button>
-          <button type="button" data-action="about">Sobre</button>
-        </div>
+
+<body>
+  <div class="menu_superior">
+    <div class="menu-wrap">
+      <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menu">⋮</button>
+      <div id="menuDropdown" class="menu-dropdown">
+        <button type="button" data-action="mine">Meu ID</button>
+        <button type="button" data-action="calendars">Meus calendários</button>
+        <button type="button" data-action="ferias">Férias planejadas</button>
+        <button type="button" data-action="config">Configurações</button>
+        <button type="button" data-action="about">Sobre</button>
+      </div>
+    </div>
+
+    <header>
+      <div class="eyebrow">Escala</div>
+      <div class="title-wrap">
+        <h1>Nome do Usuário</h1>
+        <button id="saveButton" class="save-button-header" type="button" aria-label="Salvar alterações"
+          style="display:none;">Salvar</button>
       </div>
 
-      <header>
-        <div class="eyebrow">Escala</div>
-        <div class="title-wrap">
-          <h1>Nome do Usuário</h1>
-          <button id="saveButton" class="save-button-header" type="button" aria-label="Salvar alterações" style="display:none;">Salvar</button>
-        </div>
-
-        <div class="sub">
-          Janeiro — Dezembro de
-          <span class="year-wrap">
-            <button id="yearBtn" class="year-btn" type="button">2026</button>
-            <div id="yearDropdown" class="year-dropdown">
-              <div class="year-list" id="yearList"></div>
-              <div class="year-custom">
-                <input type="number" id="yearInput" placeholder="Ano">
-                <button id="yearGo" type="button" class="btn-save-mini">Ir</button>
-              </div>
-              <button id="yearToday" type="button" class="btn-ghost-mini">Voltar para o ano atual</button>
+      <div class="sub">
+        Janeiro — Dezembro de
+        <span class="year-wrap">
+          <button id="yearBtn" class="year-btn" type="button">2026</button>
+          <div id="yearDropdown" class="year-dropdown">
+            <div class="year-list" id="yearList"></div>
+            <div class="year-custom">
+              <input type="number" id="yearInput" placeholder="Ano">
+              <button id="yearGo" type="button" class="btn-save-mini">Ir</button>
             </div>
-          </span>
-        </div>
-      </header>
-
-      <div class="legend">
-        <span><i class="dot folga"></i>Folga</span>
-        <span><i class="dot trabalho"></i>Trabalho</span>
-        <span><i class="dot folga-past"></i>Folga (passada)</span>
-        <span><i class="dot trabalho-past"></i>Trabalho (passado)</span>
-      </div>
-    </div>
-
-    <div id="viewOnlyBanner" class="view-only-banner">
-      <span id="viewOnlyText">Visualizando um cronograma compartilhado</span>
-      <button id="viewOnlyCreateBtn" type="button">Criar o meu</button>
-    </div>
-
-    <div id="calendar"></div>
-
-    <footer>
-      <p>
-        Projeto iniciado em 08/08/2026 <br> Desenvolvido para facilitar a consulta e organização dos dias de trabalho e folga.
-      </p>
-
-      <a href="https://github.com/Mateus-Saantos" target="_blank">
-        <img class="github-icon" src="img/GitHub_Logo.svg" alt="GitHub">
-      </a>
-    </footer>
-
-<!-- =====| FINAL DA PAGINA |===================================================================================== -->
-
-<!-- MENUS -->
-
-    <!-- Modal de edição do dia -->
-    <div id="modalOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="modalClose" class="modal-close" type="button">&times;</button>
-        <h2 id="modalDate">--</h2>
-
-        <label for="modalStatus">Status</label>
-        <select id="modalStatus">
-          <option value="folga">Folga</option>
-          <option value="trabalho">Trabalho</option>
-        </select>
-
-        <label for="modalComment">Comentário</label>
-        <textarea id="modalComment" rows="3" placeholder="Ex: FT programada às 08:00"></textarea>
-
-        <div class="modal-actions">
-          <button id="modalReset" type="button" class="btn-ghost">Restaurar automático</button>
-          <button id="modalSave" type="button" class="btn-save">Salvar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal de Configurações -->
-    <div id="settingsOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="settingsClose" class="modal-close" type="button">&times;</button>
-        <h2>Configurações</h2>
-
-        <label for="cfgNome">Nome</label>
-        <input type="text" id="cfgNome" placeholder="Seu nome">
-
-        <label for="cfgTipo">Tipo de escala</label>
-        <select id="cfgTipo">
-          <option value="12x36">12x36</option>
-          <option value="5x2">5x2</option>
-          <option value="personalizada">Personalizada</option>
-        </select>
-
-        <div id="cfgCustomGroup" class="custom-group">
-          <label for="cfgCustomWork">Dias trabalhando</label>
-          <input type="number" id="cfgCustomWork" min="1" value="3">
-          <label for="cfgCustomOff">Dias de folga</label>
-          <input type="number" id="cfgCustomOff" min="1" value="2">
-        </div>
-
-        <label for="cfgRefDate">Data de referência</label>
-        <input type="date" id="cfgRefDate">
-
-        <label>Nesse dia eu estava</label>
-        <div class="radio-row">
-          <label class="radio-option"><input type="radio" name="cfgRefStatus" value="trabalho"> Trabalhando</label>
-          <label class="radio-option"><input type="radio" name="cfgRefStatus" value="folga"> De folga</label>
-        </div>
-
-        <label for="cfgTema">Tema</label>
-        <select id="cfgTema">
-          <option value="dark">Escuro</option>
-          <option value="light">Claro</option>
-        </select>
-
-        <div class="modal-actions">
-          <button id="settingsCancel" type="button" class="btn-ghost">Cancelar</button>
-          <button id="settingsSave" type="button" class="btn-save">Salvar</button>
-        </div>
-
-        <button id="settingsLoadExisting" type="button" class="btn-ghost-mini settings-load-existing">
-          Já tenho um ID — carregar cronograma existente
-        </button>
-      </div>
-    </div>
-
-    <!-- Modal de conflito (link compartilhado vs config local) -->
-    <div id="conflictOverlay" class="modal-overlay">
-      <div class="modal">
-        <h2>Escala compartilhada encontrada</h2>
-        <p class="conflict-text">Encontramos uma escala compartilhada. Deseja carregar essa configuração?</p>
-        <div class="modal-actions">
-          <button id="conflictKeep" type="button" class="btn-ghost">Manter minha escala</button>
-          <button id="conflictLoad" type="button" class="btn-save">Carregar escala</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Sobre -->
-    <div id="aboutOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="aboutClose" class="modal-close" type="button">&times;</button>
-        <h2>Sobre</h2>
-        <p class="about-text">Calendário de escalas de trabalho. </p><br>
-        <p class="about-text">Configure seu nome, tipo de escala e data de referência em ⋮ → Configurações. </p><br>
-        <p class="about-text">Compartilhe sua escala com colegas em ⋮ → Compartilhar escala.</p>
-
-      </div>
-    </div>
-
-    <!-- Modal Férias planejadas -->
-    <div id="feriasOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="feriasClose" class="modal-close" type="button">&times;</button>
-        <h2 id="feriasTitle">Férias planejadas</h2>
-
-        <!-- Vista de lista -->
-        <div id="feriasListView">
-          <div id="feriasListContent" class="manager-list"></div>
-          <div class="modal-actions">
-            <button id="feriasNewBtn" type="button" class="btn-save">+ Nova férias</button>
+            <button id="yearToday" type="button" class="btn-ghost-mini">Voltar para o ano atual</button>
           </div>
-        </div>
+        </span>
+      </div>
+    </header>
 
-        <!-- Vista de formulário (criar/editar) -->
-        <div id="feriasFormView" class="ferias-form-view">
-          <label for="feriasDataInicio">Data de início</label>
-          <input type="date" id="feriasDataInicio">
+    <div class="legend">
+      <span><i class="dot folga"></i>Folga</span>
+      <span><i class="dot trabalho"></i>Trabalho</span>
+      <span><i class="dot folga-past"></i>Folga (passada)</span>
+      <span><i class="dot trabalho-past"></i>Trabalho (passado)</span>
+    </div>
+  </div>
 
-          <label for="feriasQuantidade">Quantidade de dias</label>
-          <input type="number" id="feriasQuantidade" min="1" value="15">
+  <div id="viewOnlyBanner" class="view-only-banner">
+    <span id="viewOnlyText">Visualizando um cronograma compartilhado</span>
+    <button id="viewOnlyCreateBtn" type="button">Criar o meu</button>
+  </div>
 
-          <p id="feriasPreview" class="ferias-preview"></p>
+  <div id="calendar"></div>
 
-          <div class="modal-actions">
-            <button id="feriasFormCancel" type="button" class="btn-ghost">Cancelar</button>
-            <button id="feriasFormSave" type="button" class="btn-save">Salvar</button>
-          </div>
-        </div>
+  <footer>
+    <p>
+      Projeto iniciado em 08/08/2026 <br> Desenvolvido para facilitar a consulta e organização dos dias de trabalho e
+      folga.
+    </p>
+
+    <a href="https://github.com/Mateus-Saantos" target="_blank">
+      <img class="github-icon" src="img/GitHub_Logo.svg" alt="GitHub">
+    </a>
+  </footer>
+
+  <!-- =====| FINAL DA PAGINA |===================================================================================== -->
+
+  <!-- MENUS -->
+
+  <!-- Modal de edição do dia -->
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="modalClose" class="modal-close" type="button">&times;</button>
+      <h2 id="modalDate">--</h2>
+
+      <label for="modalStatus">Status</label>
+      <select id="modalStatus">
+        <option value="folga">Folga</option>
+        <option value="trabalho">Trabalho</option>
+      </select>
+
+      <label for="modalComment">Comentário</label>
+      <textarea id="modalComment" rows="3" placeholder="Ex: FT programada às 08:00"></textarea>
+
+      <div class="modal-actions">
+        <button id="modalReset" type="button" class="btn-ghost">Restaurar automático</button>
+        <button id="modalSave" type="button" class="btn-save">Salvar</button>
       </div>
     </div>
+  </div>
 
-    <!-- Modal Meu ID -->
-    <div id="mineOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="mineClose" class="modal-close" type="button">&times;</button>
-        <h2>Meu ID</h2>
-        <p class="about-text">ID:</p>
-        <p id="mineId" class="mine-id">--</p>
-        <p id="mineCalendarsHint" class="about-text"></p>
+  <!-- Modal de Configurações -->
+  <div id="settingsOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="settingsClose" class="modal-close" type="button">&times;</button>
+      <h2>Configurações</h2>
+
+      <label for="cfgNome">Nome</label>
+      <input type="text" id="cfgNome" placeholder="Seu nome">
+
+      <label for="cfgTipo">Tipo de escala</label>
+      <select id="cfgTipo">
+        <option value="12x36">12x36</option>
+        <option value="5x2">5x2</option>
+        <option value="personalizada">Personalizada</option>
+      </select>
+
+      <div id="cfgCustomGroup" class="custom-group">
+        <label for="cfgCustomWork">Dias trabalhando</label>
+        <input type="number" id="cfgCustomWork" min="1" value="3">
+        <label for="cfgCustomOff">Dias de folga</label>
+        <input type="number" id="cfgCustomOff" min="1" value="2">
+      </div>
+
+      <label for="cfgRefDate">Data de referência</label>
+      <input type="date" id="cfgRefDate">
+
+      <label>Nesse dia eu estava</label>
+      <div class="radio-row">
+        <label class="radio-option"><input type="radio" name="cfgRefStatus" value="trabalho"> Trabalhando</label>
+        <label class="radio-option"><input type="radio" name="cfgRefStatus" value="folga"> De folga</label>
+      </div>
+
+      <label for="cfgTema">Tema</label>
+      <select id="cfgTema">
+        <option value="dark">Escuro</option>
+        <option value="light">Claro</option>
+      </select>
+
+      <div class="modal-actions">
+        <button id="settingsCancel" type="button" class="btn-ghost">Cancelar</button>
+        <button id="settingsSave" type="button" class="btn-save">Salvar</button>
+      </div>
+
+      <button id="settingsLoadExisting" type="button" class="btn-ghost-mini settings-load-existing">
+        Já tenho um ID — carregar cronograma existente
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal de conflito (link compartilhado vs config local) -->
+  <div id="conflictOverlay" class="modal-overlay">
+    <div class="modal">
+      <h2>Escala compartilhada encontrada</h2>
+      <p class="conflict-text">Encontramos uma escala compartilhada. Deseja carregar essa configuração?</p>
+      <div class="modal-actions">
+        <button id="conflictKeep" type="button" class="btn-ghost">Manter minha escala</button>
+        <button id="conflictLoad" type="button" class="btn-save">Carregar escala</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Sobre -->
+  <div id="aboutOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="aboutClose" class="modal-close" type="button">&times;</button>
+      <h2>Sobre</h2>
+      <p class="about-text">Calendário de escalas de trabalho. </p><br>
+      <p class="about-text">Configure seu nome, tipo de escala e data de referência em ⋮ → Configurações. </p><br>
+      <p class="about-text">Compartilhe sua escala com colegas em ⋮ → Compartilhar escala.</p>
+
+    </div>
+  </div>
+
+  <!-- Modal Férias planejadas -->
+  <div id="feriasOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="feriasClose" class="modal-close" type="button">&times;</button>
+      <h2 id="feriasTitle">Férias planejadas</h2>
+
+      <!-- Vista de lista -->
+      <div id="feriasListView">
+        <div id="feriasListContent" class="manager-list"></div>
         <div class="modal-actions">
-          <button id="mineCopy" type="button" class="btn-ghost">Copiar ID</button>
-          <button id="mineShare" type="button" class="btn-save">Compartilhar</button>
+          <button id="feriasNewBtn" type="button" class="btn-save">+ Nova férias</button>
         </div>
       </div>
-    </div>
 
-    <!-- Modal Meus Calendários (Fase 3) -->
-    <div id="myCalendarsOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="myCalendarsClose" class="modal-close" type="button">&times;</button>
-        <h2>Meus calendários</h2>
-        <div id="myCalendarsListContent" class="manager-list"></div>
-        <div class="modal-actions">
-          <button id="myCalendarsNewBtn" type="button" class="btn-save">+ Novo calendário</button>
-          <button id="myCalendarsLoadBtn" type="button" class="btn-ghost">Carregar calendário</button>
-        </div>
-      </div>
-    </div>
+      <!-- Vista de formulário (criar/editar) -->
+      <div id="feriasFormView" class="ferias-form-view">
+        <label for="feriasDataInicio">Data de início</label>
+        <input type="date" id="feriasDataInicio">
 
-    <!-- Modal Novo Calendário (Fase 3) -->
-    <div id="newCalendarOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="newCalendarClose" class="modal-close" type="button">&times;</button>
-        <h2>Novo calendário</h2>
+        <label for="feriasQuantidade">Quantidade de dias</label>
+        <input type="number" id="feriasQuantidade" min="1" value="15">
 
-        <label for="newCalendarName">Nome</label>
-        <input type="text" id="newCalendarName" placeholder="Ex: Faculdade">
-
-        <label for="newCalendarType">Tipo</label>
-        <select id="newCalendarType">
-          <option value="12x36">12x36</option>
-          <option value="5x2">5x2</option>
-          <option value="personalizada">Personalizada</option>
-        </select>
+        <p id="feriasPreview" class="ferias-preview"></p>
 
         <div class="modal-actions">
-          <button id="newCalendarCancel" type="button" class="btn-ghost">Cancelar</button>
-          <button id="newCalendarCreate" type="button" class="btn-save">Criar calendário</button>
+          <button id="feriasFormCancel" type="button" class="btn-ghost">Cancelar</button>
+          <button id="feriasFormSave" type="button" class="btn-save">Salvar</button>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Os modais abaixo (Gerenciador com senha) pertencem ao conceito antigo de
-         administrador, abandonado nesta fase. Ficam sem uso (nenhum botão do menu
-         aponta mais pra eles), mas não foram removidos para não arriscar quebrar
-         nada — ver relatório da Fase 3 para detalhes. -->
-
-    <!-- Modal Gerenciador: senha -->
-    <div id="managerPasswordOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="managerPasswordClose" class="modal-close" type="button">&times;</button>
-        <h2>🔐 Gerenciador de Cronogramas</h2>
-        <label for="managerPasswordInput">Digite a senha</label>
-        <input type="password" id="managerPasswordInput" placeholder="••••••••">
-        <div class="modal-actions">
-          <button id="managerPasswordCancel" type="button" class="btn-ghost">Cancelar</button>
-          <button id="managerPasswordSubmit" type="button" class="btn-save">Acessar</button>
-        </div>
+  <!-- Modal Meu ID -->
+  <div id="mineOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="mineClose" class="modal-close" type="button">&times;</button>
+      <h2>Meu ID</h2>
+      <p class="about-text">ID:</p>
+      <p id="mineId" class="mine-id">--</p>
+      <p id="mineCalendarsHint" class="about-text"></p>
+      <div class="modal-actions">
+        <button id="mineCopy" type="button" class="btn-ghost">Copiar ID</button>
+        <button id="mineShare" type="button" class="btn-save">Compartilhar</button>
       </div>
     </div>
+  </div>
 
-    <!-- Modal Gerenciador: lista -->
-    <div id="managerListOverlay" class="modal-overlay">
-      <div class="modal">
-        <button id="managerListClose" class="modal-close" type="button">&times;</button>
-        <h2>Gerenciador de Cronogramas</h2>
-        <div id="managerListContent" class="manager-list"></div>
+  <!-- Modal Meus Calendários-->
+  <div id="myCalendarsOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="myCalendarsClose" class="modal-close" type="button">&times;</button>
+      <h2>Meus calendários</h2>
+      <div id="myCalendarsListContent" class="manager-list"></div>
+      <div class="modal-actions">
+        <button id="myCalendarsNewBtn" type="button" class="btn-save">+ Novo calendário</button>
+        <button id="myCalendarsLoadBtn" type="button" class="btn-ghost">Carregar calendário</button>
       </div>
     </div>
+  </div>
 
-    <!-- FIM MENUS -->
+  <!-- Modal Novo Calendário -->
+  <div id="newCalendarOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="newCalendarClose" class="modal-close" type="button">&times;</button>
+      <h2>Novo calendário</h2>
 
-    <div id="toast" class="toast"></div>
+      <label for="newCalendarName">Nome</label>
+      <input type="text" id="newCalendarName" placeholder="Ex: Faculdade">
 
-    <button id="backToTodayBtn" class="back-to-today" type="button" aria-label="Voltar para hoje">
-      <span class="back-to-today-icon">◎</span>
-      <span class="back-to-today-label">Hoje</span>
-    </button>
+      <label for="newCalendarType">Tipo</label>
+      <select id="newCalendarType">
+        <option value="12x36">12x36</option>
+        <option value="5x2">5x2</option>
+        <option value="personalizada">Personalizada</option>
+      </select>
 
-    <script type="module" src="firebase.js"></script>
-    <script type="module" src="js/app.js"></script>
-  </body>
+      <div class="modal-actions">
+        <button id="newCalendarCancel" type="button" class="btn-ghost">Cancelar</button>
+        <button id="newCalendarCreate" type="button" class="btn-save">Criar calendário</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIM MENUS -->
+
+  <div id="toast" class="toast"></div>
+
+  <button id="backToTodayBtn" class="back-to-today" type="button" aria-label="Voltar para hoje">
+    <span class="back-to-today-icon">◎</span>
+    <span class="back-to-today-label">Hoje</span>
+  </button>
+
+  <script type="module" src="firebase.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+
 </html>

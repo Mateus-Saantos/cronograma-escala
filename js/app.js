@@ -25,7 +25,6 @@ import { createDayModal } from './day-modal.js';
 import { createYearSelector } from './year-selector.js';
 import { createSettingsModule } from './settings.js';
 import { initCalendarsUI } from './calendars-ui.js';
-import { createManagerModule } from './manager.js';
 
 const monthNames = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -421,13 +420,6 @@ const settings = createSettingsModule({
   loadCronogramaById
 });
 
-const manager = createManagerModule({
-  cloudDisponivel,
-  sha256Hex,
-  loadCronogramaById,
-  showToast
-});
-
 function initCalendarsModule() {
   const elements = {
     myCalendarsOverlay: document.getElementById('myCalendarsOverlay'),
@@ -501,7 +493,6 @@ dayModal.initDayModalUI();
 yearSelector.initYearSelectorUI();
 settings.initSettingsUI();
 initSyncUI();
-manager.initManagerUI();
 
 const viewOnlyCreateBtn = document.getElementById('viewOnlyCreateBtn');
 viewOnlyCreateBtn?.addEventListener('click', async () => {
@@ -540,7 +531,7 @@ aboutOverlay?.addEventListener('click', event => {
   if (event.target === aboutOverlay) aboutOverlay.classList.remove('open');
 });
 
-/* Férias planejadas — a interface continua aqui; helpers ficam em vacations.js. */
+/* Férias planejadas — a interface esta aqui; helpers ficam em vacations.js. */
 const feriasOverlay = document.getElementById('feriasOverlay');
 const feriasTitle = document.getElementById('feriasTitle');
 const feriasListView = document.getElementById('feriasListView');
@@ -715,9 +706,6 @@ document.getElementById('mineShare').addEventListener('click', () => {
   mineOverlay.classList.remove('open');
   shareSchedule();
 });
-
-/* Gerenciador antigo permanece conectado porque os elementos ainda existem no HTML. */
-window.openManagerPassword = manager.openManagerPassword;
 
 /* Tema/layout e inicialização */
 function initTheme() {

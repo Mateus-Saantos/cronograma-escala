@@ -1,8 +1,8 @@
 /* =========================================================
-   Tema Escuro — valores idênticos ao visual original do projeto.
-   Este arquivo só define variáveis de cor. Layout, espaçamento,
-   tipografia e estrutura ficam inteiramente em style.css.
-   ========================================================= */
+Tema Escuro — visual do projeto.
+Este arquivo só define variáveis de cor. Layout, espaçamento,
+tipografia e estrutura ficam inteiramente em style.css.
+========================================================= */
 :root {
   /* Base */
   --bg: #0f1418;
@@ -45,5 +45,5 @@
 
   /* Ícone do GitHub no rodapé (logo é escura por padrão, precisa inverter no escuro) */
   --icon-filter: invert(1);
-  --borderToDay: 
+  --borderToDay:
 }
