@@ -1,0 +1,19 @@
+js/
+    ├── schedule.js         ✓
+    ├── state.js            ✓
+    ├── storage.js          ✓
+    ├── calendars.js        ✓
+    ├── calendars-ui.js     ✓
+    ├── sync.js             ✓
+    ├── ui.js               ✓
+    ├── settings.js         ✓
+    ├── vacations.js        ✓
+    ├── day-modal.js        ✓
+    ├── year-selector.js    ✓
+    ├── manager.js          ✓
+    └── app.js              x
+
+>>ATENÇÃO
+  • Os comentários dos dias são inseridos no atributo HTML title, com as aspas duplas escapadas. Como esse conteúdo vem do usuário, vale revisar a forma de construir esse atributo e testar comentários com caracteres especiais. Não alterei isso nesta etapa, pois nosso objetivo agora é preservar o comportamento
+
+  • Em manager.js, dados vindos da nuvem (item.nome, item.tipo e item.id) são inseridos diretamente em innerHTML. Se esses valores contiverem HTML malicioso, existe risco de injeção de conteúdo.
