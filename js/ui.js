@@ -80,13 +80,19 @@ export function createCalendarUI({
       const feriasLabel = feriasCount ? ` · ${feriasCount} férias` : '';
 
       monthEl.innerHTML = `
+        <div class="month-bar"></div>
         <div class="month-title">
           <span>${monthNames[monthIdx]} ${year}</span>
           <span class="month-count">${folgaCount} folgas · ${trabalhoCount} trab.${feriasLabel}</span>
         </div>
-        <div class="weekdays">${weekdayLabels.map(w => `<div>${w}</div>`).join('')}</div>
+
+        <div class="weekdays">
+          ${weekdayLabels.map(w => `<div>${w}</div>`).join('')}
+        </div>
+
         <div class="grid">${cells.join('')}</div>
       `;
+
 
       container.appendChild(monthEl);
     }
