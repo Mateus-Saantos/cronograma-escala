@@ -8,10 +8,10 @@
     // Aplica o tema salvo ANTES do CSS carregar, pra não piscar o tema errado.
     (function () {
       var tema = localStorage.getItem('escala-tema') || 'dark';
-      document.write('<link id="themeStylesheet" rel="stylesheet" href="theme-' + tema + '.css">');
+      document.write('<link id="themeStylesheet" rel="stylesheet" href="css/themes/theme-' + tema + '.css">');
     })();
   </script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/style.css">
   <title>Cronograma de Escala</title>
 </head>
 
@@ -269,7 +269,6 @@
     <span class="back-to-today-label">Hoje</span>
   </button>
 
-  <script type="module" src="firebase.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 

@@ -15,6 +15,11 @@
  * A lógica das funções abaixo foi mantida com base no original.
  */
 
+import {
+    atualizarCronograma,
+    salvarCronograma
+} from './firebase.js';
+
 export function createSyncModule({
   getActiveCalendarId,
   calendarStorageKey,
@@ -209,12 +214,12 @@ export function createSyncModule({
       }
 
       if (usarUpdateParcial) {
-        await window.firebaseCronograma.atualizarCronograma(
+        await atualizarCronograma(
           cloudId,
           camposParaEnviar
         );
       } else {
-        await window.firebaseCronograma.salvarCronograma(
+        await salvarCronograma(
           camposParaEnviar,
           cloudId
         );

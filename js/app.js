@@ -25,6 +25,18 @@ import { createDayModal } from './day-modal.js';
 import { createYearSelector } from './year-selector.js';
 import { createSettingsModule } from './settings.js';
 import { initCalendarsUI } from './calendars-ui.js';
+import { atualizarFaviconDoDia } from './utils/favicon.js';
+import {
+  salvarIndice,
+  carregarCronogramaPorId,
+  salvarCronograma
+}
+  from './firebase.js';
+
+
+atualizarFaviconDoDia();
+// Verifica se mudou o dia enquanto a página está aberta.
+setInterval(atualizarFaviconDoDia, 60_000);
 
 const monthNames = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -277,7 +289,7 @@ async function loadCronogramaById(id, asOwner) {
   }
   let cloudData = null;
   try {
-    cloudData = await window.firebaseCronograma.carregarCronogramaPorId(id);
+    cloudData = await carregarCronogramaPorId(id);
   } catch (error) {
     console.error('Erro ao carregar cronograma:', error);
   }
@@ -351,7 +363,7 @@ async function criarNovoCalendarioLocal(nome, tipo) {
   const config = Object.assign({}, DEFAULT_CONFIG, { tipo });
   let cloudId = null;
   try {
-    cloudId = await window.firebaseCronograma.salvarCronograma({
+    cloudId = await salvarCronograma({
       config, overrides: {}, ferias: []
     });
   } catch (error) {
@@ -376,7 +388,7 @@ async function criarNovoCalendarioLocal(nome, tipo) {
   clearCalendarDirty();
 
   try {
-    await window.firebaseCronograma.salvarIndice(cloudId, {
+    await salvarIndice(cloudId, {
       nome, tipo, atualizadoEm: Date.now()
     });
   } catch (error) {
@@ -682,7 +694,7 @@ async function shareSchedule() {
   showToast('Gerando link...');
   try {
     const data = { config: getCurrentConfig(), overrides: readOverrides(), ferias: readFerias() };
-    const cloudId = await window.firebaseCronograma.salvarCronograma(data, getCloudId());
+    const cloudId = await salvarCronograma(data, getCloudId());
     setCloudId(cloudId);
     saveSyncedState(data);
     clearCalendarDirty();
@@ -749,7 +761,7 @@ async function init() {
       if (cloudDisponivel()) {
         showToast('Carregando cronograma compartilhado...');
         try {
-          const cloudData = await window.firebaseCronograma.carregarCronogramaPorId(urlId);
+          const cloudData = await carregarCronogramaPorId(urlId);
           if (cloudData && cloudData.config) {
             state.pendingSharedConfig = cloudData.config;
             state.pendingSharedOverrides = cloudData.overrides || {};
@@ -787,50 +799,3 @@ init();
 
 // criar um /js/favicon.js colcoar export nesse aqui e dar um import aqui no app.js
 
-function atualizarFaviconDoDia() {
-    const dia = new Date().getDate();
-
-    const centroX = 48 * 0.5;
-    const centroY = 48 * 0.5 + 15;
-    const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 48 48"
-        width="160">
-        <rect x="1" y="4" width="46" height="43"
-            rx="7" fill="#eee"/>
-
-        <path d="M 8 4 H 40 Q 47 4 47 11 V 15 H 1 V 11 Q 1 4 8 4 Z" fill="#55bbff"/>
-
-        <path d="M10 8 V8  M37 8 V8"
-            stroke="#0067ac" stroke-width="6"
-            stroke-linecap="round"/>
-        <path d="M10 3 V8  M37 3 V8"
-            stroke="#eee" stroke-width="4"
-            stroke-linecap="round"/>
-        <text x="${centroX}" y="${centroY}"
-            font-family="Arial, sans-serif"
-            font-size="${dia >= 10 ? 28 : 28}"
-            font-weight="bold"
-            text-anchor="middle"
-            fill="#0099ff">${dia}</text>
-    </svg>
-    `;
-
-
-  let favicon = document.querySelector('link[rel~="icon"]');
-
-  if (!favicon) {
-    favicon = document.createElement('link');
-    favicon.rel = 'icon';
-    document.head.appendChild(favicon);
-  }
-
-  favicon.type = 'image/svg+xml';
-  favicon.href =
-    'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-}
-
-atualizarFaviconDoDia();
-
-// Verifica se mudou o dia enquanto a página está aberta.
-setInterval(atualizarFaviconDoDia, 60_000);

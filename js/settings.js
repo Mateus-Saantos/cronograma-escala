@@ -1,3 +1,8 @@
+import {
+    salvarCronograma,
+    salvarIndice
+} from './firebase.js';
+
 export function createSettingsModule({
     DEFAULT_CONFIG,
     cfgTemaSelect,
@@ -192,7 +197,7 @@ export function createSettingsModule({
 
                 try {
                     const novoId =
-                        await window.firebaseCronograma.salvarCronograma({
+                        await salvarCronograma({
                             config: newConfig,
                             overrides: {},
                             ferias: []
@@ -224,7 +229,7 @@ export function createSettingsModule({
                     // O cronograma acabou de ser criado e já está sincronizado.
                     clearCalendarDirty();
 
-                    await window.firebaseCronograma.salvarIndice(novoId, {
+                    await salvarIndice(novoId, {
                         nome: newConfig.nome || '(sem nome)',
                         tipo: newConfig.tipo,
                         atualizadoEm: Date.now()

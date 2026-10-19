@@ -58,44 +58,19 @@ async function salvarIndice(id, resumo) {
 }
 
 /**
- * Lista todos os resumos de cronogramas (usado pelo Gerenciador,
- * depois da senha confirmada).
- */
-async function listarIndice() {
-  const snap = await getDocs(collection(db, "indice_cronogramas"));
-  const lista = [];
-  snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
-  return lista;
-}
-
-/**
- * Busca o hash (SHA-256) da senha do Gerenciador, salvo manualmente
- * no Firestore Console em sistema/gerenciador → campo senhaHash.
- * A senha em si nunca fica no código.
- */
-async function buscarHashSenhaGerenciador() {
-  const snap = await getDoc(doc(db, "sistema", "gerenciador"));
-  return snap.exists() ? (snap.data().senhaHash || null) : null;
-}
-
-/**
  * Atualiza SOMENTE os campos informados de um cronograma já existente
  * (ex.: só "config" e "ferias", sem tocar em "overrides"). Usa updateDoc,
  * que — diferente de setDoc — não substitui o documento inteiro, só os
  * campos passados em "campos". Falha se o documento não existir.
  */
+
 async function atualizarCronograma(id, campos) {
   await updateDoc(doc(db, "cronogramas", id), campos);
 }
 
-// Exposto em window pois script.js é carregado como script separado
-// (não usa import/export entre os dois arquivos).
-window.firebaseCronograma = {
-  salvarCronograma,
-  carregarCronogramaPorId,
-  gerarId,
-  salvarIndice,
-  listarIndice,
-  buscarHashSenhaGerenciador,
-  atualizarCronograma
+export {
+  salvarCronograma, //app, settings, sync
+  carregarCronogramaPorId, //app
+  salvarIndice, //app, settings
+  atualizarCronograma //sync
 };
