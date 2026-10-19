@@ -16,8 +16,8 @@
  */
 
 import {
-    atualizarCronograma,
-    salvarCronograma
+  atualizarCronograma,
+  salvarCronograma
 } from './firebase.js';
 
 export function createSyncModule({
@@ -265,7 +265,7 @@ export function createSyncModule({
   }
 
   function cloudDisponivel() {
-    return typeof window.firebaseCronograma !== 'undefined';
+    return navigator.onLine;
   }
 
   /* ---------- Conexão com a interface ---------- */

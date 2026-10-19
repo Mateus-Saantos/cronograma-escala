@@ -1,7 +1,7 @@
 import {
     salvarCronograma,
     salvarIndice
-} from './firebase.js';
+} from './services/firebase.js';
 
 export function createSettingsModule({
     DEFAULT_CONFIG,

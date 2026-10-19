@@ -72,5 +72,6 @@ export {
   salvarCronograma, //app, settings, sync
   carregarCronogramaPorId, //app
   salvarIndice, //app, settings
-  atualizarCronograma //sync
+  atualizarCronograma, //sync
+  cloudDisponivel
 };

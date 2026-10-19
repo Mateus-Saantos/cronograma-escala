@@ -4,7 +4,6 @@
  * a página for conectada a ele na etapa de integração.
  */
 
-import { state } from './state.js';
 import {
   parseLocalDateKey, dateKey, isSameDay, daysBetween,
   calculateScheduleDate
@@ -13,26 +12,21 @@ import {
   loadConfig, saveConfig, hasStoredConfig,
   loadOverrides, saveOverrides, getActiveOverrides,
   loadFerias, saveFerias, getActiveFerias
-} from './storage.js';
+} from './services/storage.js';
 import {
   gerarCalendarioId, calendarStorageKey, getMyCalendars,
   registrarCalendario, getActiveCalendarId, migrarParaMeusCalendarios
 } from './calendars.js';
-import { gerarFeriasId, getFeriasParaData, formatFeriasRange } from './vacations.js';
-import { createSyncModule } from './sync.js';
+import { state } from './state.js';
+import { createSyncModule } from './services/sync.js';
 import { createCalendarUI } from './ui.js';
 import { createDayModal } from './day-modal.js';
 import { createYearSelector } from './year-selector.js';
 import { createSettingsModule } from './settings.js';
 import { initCalendarsUI } from './calendars-ui.js';
 import { atualizarFaviconDoDia } from './utils/favicon.js';
-import {
-  salvarIndice,
-  carregarCronogramaPorId,
-  salvarCronograma
-}
-  from './firebase.js';
-
+import { gerarFeriasId, getFeriasParaData, formatFeriasRange } from './vacations.js';
+import { salvarIndice, carregarCronogramaPorId, salvarCronograma } from './services/firebase.js';
 
 atualizarFaviconDoDia();
 // Verifica se mudou o dia enquanto a página está aberta.
