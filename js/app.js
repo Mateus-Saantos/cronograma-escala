@@ -84,7 +84,7 @@ function loadTheme() {
 }
 function applyTheme(theme) {
   const link = document.getElementById('themeStylesheet');
-  if (link) link.setAttribute('href', `theme-${theme}.css`);
+  if (link) link.setAttribute('href', `css/themes/theme-${theme}.css`);
   localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 const cfgTemaSelect = document.getElementById('cfgTema');
@@ -165,7 +165,7 @@ const sync = createSyncModule({
   showToast
 });
 const {
-  hasUnsavedChanges, markCalendarAsDirty, clearCalendarDirty,
+  markCalendarAsDirty, clearCalendarDirty,
   updateDirtyIndicator, saveSyncedState, getCloudId, setCloudId,
   cloudDisponivel, initSyncUI
 } = sync;
@@ -198,22 +198,6 @@ function updateViewOnlyBanner() {
   } else {
     banner.classList.remove('show');
   }
-}
-
-function sha256Hex(text) {
-  const bytes = new TextEncoder().encode(text);
-  return crypto.subtle.digest('SHA-256', bytes).then(hashBuffer =>
-    Array.from(new Uint8Array(hashBuffer))
-      .map(byte => byte.toString(16).padStart(2, '0'))
-      .join('')
-  );
-}
-
-function updateActiveCalendarRecord(localId, config) {
-  if (localId) registerCalendar(localId, {
-    name: config.nome || '',
-    type: config.tipo
-  });
 }
 
 function getCurrentCalendar() {
@@ -789,7 +773,3 @@ async function init() {
   if (todayElement) todayElement.scrollIntoView({ behavior: 'instant', block: 'center' });
 }
 init();
-
-
-// criar um /js/favicon.js colcoar export nesse aqui e dar um import aqui no app.js
-

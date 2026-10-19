@@ -903,4 +903,7 @@ footer {
     margin: 0 0 20px;
     font-size: 12px;
   }
+  .day {
+  aspect-ratio: 1.12;
+  }
 }
