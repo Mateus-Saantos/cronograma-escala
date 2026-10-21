@@ -907,3 +907,9 @@ footer {
   aspect-ratio: 1.12;
   }
 }
+
+@media (min-width: 795px) {
+  .day {
+  aspect-ratio: 1.5;
+  }
+}

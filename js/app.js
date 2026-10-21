@@ -33,7 +33,15 @@ const monthNames = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
+// const monthNames = [
+//   'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+//   'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
+// ];
+
 const weekdayLabels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+//const weekdayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+//const weekdayLabels = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
 
 const OVERRIDES_STORAGE_KEY = 'escala-overrides-2026';
 const CONFIG_STORAGE_KEY = 'escala-config-v1';
