@@ -1,3 +1,8 @@
+import {
+  openOverlay,
+  closeOverlay
+} from './utils/dom.js';
+
 export function createDayModal({
     getActiveOverrides,
     loadOverrides,
@@ -42,11 +47,11 @@ export function createDayModal({
         modalSave.style.display = isViewOnly ? 'none' : '';
         modalReset.style.display = isViewOnly ? 'none' : '';
 
-        modalOverlay.classList.add('open');
+        openOverlay(modalOverlay);
     }
 
     function closeDayModal() {
-        modalOverlay.classList.remove('open');
+        closeOverlay(modalOverlay);
         currentKey = null;
     }
 

@@ -3,6 +3,11 @@ import {
     salvarIndice
 } from './services/firebase.js';
 
+import {
+  openOverlay,
+  closeOverlay
+} from './utils/dom.js';
+
 export function createSettingsModule({
     DEFAULT_CONFIG,
     cfgTemaSelect,
@@ -87,11 +92,11 @@ export function createSettingsModule({
             fillSettingsForm(getCurrentConfig());
         }
 
-        settingsOverlay.classList.add('open');
+        openOverlay(settingsOverlay);
     }
 
     function closeSettings() {
-        settingsOverlay.classList.remove('open');
+        closeOverlay(settingsOverlay);
     }
 
     /*

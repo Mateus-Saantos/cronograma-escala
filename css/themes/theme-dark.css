@@ -45,5 +45,25 @@ tipografia e estrutura ficam inteiramente em style.css.
 
   /* Ícone do GitHub no rodapé (logo é escura por padrão, precisa inverter no escuro) */
   --icon-filter: invert(1);
-  --borderToDay:
+  /* Cores exclusivas do topo do calendário */
+  --top-calendar-folga: var(--folga-bg);
+  --top-calendar-trabalho: var(--line);
+  --top-calendar-ferias: var(--line);
+}
+
+input[type="date"] {
+  color: white;
+  color-scheme: dark;
+}
+
+.day.today.folga {
+  --borderToDay: var(--folga);
+}
+
+.day.today.trabalho {
+  --borderToDay: var(--trabalho);
+}
+
+.day.today.ferias {
+  --borderToDay: var(--ferias);
 }

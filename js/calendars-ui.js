@@ -7,6 +7,12 @@
    - Delegar as operações aos módulos responsáveis.
    ========================================================= */
 
+
+import {
+  openOverlay,
+  closeOverlay
+} from './utils/dom.js';
+
 const TIPO_LABELS = {
   '12x36': '12x36',
   '5x2': '5x2',
@@ -58,7 +64,7 @@ export function renderMyCalendarsList({
     if (!isActive) {
       row.querySelector('button').addEventListener('click', () => {
         switchToCalendar(cal.localId);
-        myCalendarsOverlay.classList.remove('open');
+        closeOverlay(myCalendarsOverlay);
         showToast(`Agora em: ${cal.name || 'calendário'}`);
       });
     }
@@ -72,7 +78,7 @@ export function openMyCalendarsModal({
   myCalendarsOverlay
 }) {
   renderList();
-  myCalendarsOverlay.classList.add('open');
+  openOverlay(myCalendarsOverlay);
 }
 
 /**
@@ -117,12 +123,12 @@ export function initCalendarsUI({
   });
 
   myCalendarsClose.addEventListener('click', () => {
-    myCalendarsOverlay.classList.remove('open');
+    closeOverlay(myCalendarsOverlay);
   });
 
   myCalendarsOverlay.addEventListener('click', e => {
     if (e.target === myCalendarsOverlay) {
-      myCalendarsOverlay.classList.remove('open');
+      closeOverlay(myCalendarsOverlay);
     }
   });
 
@@ -130,32 +136,32 @@ export function initCalendarsUI({
     newCalendarName.value = '';
     newCalendarType.value = '12x36';
 
-    myCalendarsOverlay.classList.remove('open');
-    newCalendarOverlay.classList.add('open');
+    closeOverlay(myCalendarsOverlay);
+    openOverlay(newCalendarOverlay);
   });
 
   myCalendarsLoadBtn.addEventListener('click', async () => {
     const ok = await carregarCalendarioPorPrompt();
 
     if (ok) {
-      myCalendarsOverlay.classList.remove('open');
+      closeOverlay(myCalendarsOverlay);
     } else {
       renderList();
     }
   });
 
   newCalendarClose.addEventListener('click', () => {
-    newCalendarOverlay.classList.remove('open');
+    closeOverlay(newCalendarOverlay);
   });
 
   newCalendarCancel.addEventListener('click', () => {
-    newCalendarOverlay.classList.remove('open');
+    closeOverlay(newCalendarOverlay);
     openModal();
   });
 
   newCalendarOverlay.addEventListener('click', e => {
     if (e.target === newCalendarOverlay) {
-      newCalendarOverlay.classList.remove('open');
+      closeOverlay(newCalendarOverlay);
     }
   });
 
@@ -177,7 +183,7 @@ export function initCalendarsUI({
       );
 
       if (ok) {
-        newCalendarOverlay.classList.remove('open');
+        closeOverlay(newCalendarOverlay);
         showToast('Calendário criado!');
       }
     } finally {
