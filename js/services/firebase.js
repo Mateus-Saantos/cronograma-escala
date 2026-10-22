@@ -6,7 +6,7 @@ import { initializeApp }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 
 // Firestore vem de um pacote separado do firebase-app.js
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs }
+import { getFirestore, doc, setDoc, getDoc, updateDoc }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const firebaseConfig = {

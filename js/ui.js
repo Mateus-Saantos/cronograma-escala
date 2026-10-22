@@ -28,6 +28,16 @@ export function createCalendarUI({
     const overrides = getActiveOverrides();
     const feriasList = getActiveFerias();
 
+    const todayType = getFeriasParaData(today, feriasList)
+      ? 'ferias'
+      : (overrides[dateKey(today)]?.status
+        || calculateScheduleDate(today, getCurrentConfig()));
+
+    container.style.setProperty(
+      '--top-calendar-bg',
+      `var(--top-calendar-${todayType})`
+    );
+    
     for (let monthIdx = 0; monthIdx < 12; monthIdx++) {
       const year = getDisplayYear();
       const first = new Date(year, monthIdx, 1);

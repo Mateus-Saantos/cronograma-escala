@@ -1,12 +1,12 @@
-/*
- * Responsabilidade:
- * - Gerar identificadores para períodos de férias.
- * - Identificar qual período cobre uma determinada data.
- * - Formatar as datas de início e fim de um período.
- *
- * As funções de data são recebidas por parâmetro para manter
- * este módulo independente de outros arquivos.
- */
+/* =======================================================
+Responsabilidade:
+- Gerar identificadores para períodos de férias.
+- Identificar qual período cobre uma determinada data.
+- Formatar as datas de início e fim de um período.
+
+As funções de data são recebidas por parâmetro para manter
+este módulo independente de outros arquivos.
+=======================================================*/
 
 export function gerarFeriasId() {
   return 'f_' + Date.now().toString(36)
@@ -18,6 +18,7 @@ export function gerarFeriasId() {
  * Não altera nem consulta a escala: apenas verifica a
  * sobreposição de datas.
  */
+
 export function getFeriasParaData(date, listaFerias, {
   parseLocalDateKey,
   daysBetween

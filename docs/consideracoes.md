@@ -12,13 +12,13 @@ cronograma-escala/
     │   ├── constants.js
     │   └── firebase-config.js
     ├── core/   ✔
-    │   ├── dates.js    (helpers de data que hoje estão em schedule.js)
-    │   ├── schedule.js
-    │   └── vacations.js
+    │   ├── dates.js        ✔
+    │   ├── schedule.js     ✔
+    │   └── vacations.js    ✔
     ├── state/  ✔
     │   ├── state.js
     │   └── events.js
-    ├── services/   ✔
+    ├── services/       ✔
     │   ├── firebase.js ✔
     │   ├── storage.js  ✔
     │   ├── calendars-registry.js (hoje calendars.js)
@@ -32,7 +32,7 @@ cronograma-escala/
     │   ├── sync/        save-button.js
     │   └── shell/       menu.js, theme.js, layout.js, about-modal.js, view-only-banner.js
     └── utils/  ✔
-        ├── dom.js               (toast e abrir/fechar overlay)
+        ├── dom.js  ✔
         └── favicon.js  ✔
 
 >> ATENÇÃO

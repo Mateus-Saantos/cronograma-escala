@@ -1,13 +1,7 @@
-/*
- * app.js — ponto de integração dos módulos do Cronograma de Escala.
- * Mantém o script.js original intacto; este arquivo só será usado quando
- * a página for conectada a ele na etapa de integração.
- */
+/* =========================================================
+   app.js — ponto de integração dos módulos do Cronograma de Escala.
+   ========================================================= */
 
-import {
-  parseLocalDateKey, dateKey, isSameDay, daysBetween,
-  calculateScheduleDate
-} from './schedule.js';
 import {
   loadConfig, saveConfig, hasStoredConfig,
   loadOverrides, saveOverrides, getActiveOverrides,
@@ -18,14 +12,17 @@ import {
   registrarCalendario, getActiveCalendarId, migrarParaMeusCalendarios
 } from './calendars.js';
 import { state } from './state.js';
+import { createDayModal } from './day-modal.js';
+import { initCalendarsUI } from './calendars-ui.js';
 import { createSyncModule } from './services/sync.js';
 import { createCalendarUI } from './ui.js';
-import { createDayModal } from './day-modal.js';
 import { createYearSelector } from './year-selector.js';
 import { createSettingsModule } from './settings.js';
-import { initCalendarsUI } from './calendars-ui.js';
+import { calculateScheduleDate } from './core/schedule.js';
 import { atualizarFaviconDoDia } from './utils/favicon.js';
-import { gerarFeriasId, getFeriasParaData, formatFeriasRange } from './vacations.js';
+import { showToast, openOverlay, closeOverlay } from './utils/dom.js';
+import { parseLocalDateKey, dateKey, isSameDay, daysBetween } from './core/dates.js';
+import { gerarFeriasId, getFeriasParaData, formatFeriasRange } from './core/vacations.js';
 import { salvarIndice, carregarCronogramaPorId, salvarCronograma } from './services/firebase.js';
 
 atualizarFaviconDoDia();
@@ -36,7 +33,15 @@ const monthNames = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
+// const monthNames = [
+//   'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+//   'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
+// ];
+
 const weekdayLabels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+//const weekdayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+//const weekdayLabels = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
 
 const OVERRIDES_STORAGE_KEY = 'escala-overrides-2026';
 const CONFIG_STORAGE_KEY = 'escala-config-v1';
@@ -48,10 +53,18 @@ const THEME_STORAGE_KEY = 'escala-tema';
 const MY_CALENDARS_STORAGE_KEY = 'escala-meus-calendarios';
 const ACTIVE_CALENDAR_STORAGE_KEY = 'escala-calendario-ativo';
 
+const hoje = new Date();
+
+const defaultDay = [
+  hoje.getFullYear(),
+  String(hoje.getMonth() + 1).padStart(2, '0'),
+  String(hoje.getDate()).padStart(2, '0')
+].join('-');
+
 const DEFAULT_CONFIG = {
   nome: '',
   tipo: '12x36',
-  referenceDate: '2026-08-08',
+  referenceDate: defaultDay,
   referenceStatus: 'folga',
   custom: { trabalho: 3, folga: 2 }
 };
@@ -69,15 +82,6 @@ const calendarDependencies = {
   MY_CALENDARS_STORAGE_KEY,
   ACTIVE_CALENDAR_STORAGE_KEY
 };
-
-function showToast(message) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = message;
-  toast.classList.add('show');
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => toast.classList.remove('show'), 2200);
-}
 
 function loadTheme() {
   return localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
@@ -460,11 +464,11 @@ menuBtn?.addEventListener('click', event => {
   event.stopPropagation();
   menuDropdown.classList.toggle('open');
 });
-document.addEventListener('click', () => menuDropdown?.classList.remove('open'));
+document.addEventListener('click', () => closeOverlay(menuDropdown));
 menuDropdown?.querySelectorAll('button[data-action]').forEach(button => {
   button.addEventListener('click', event => {
     event.stopPropagation();
-    menuDropdown.classList.remove('open');
+    closeOverlay(menuDropdown);
     const action = button.dataset.action;
     if (state.isViewOnly && (action === 'config' || action === 'ferias')) {
       showToast('Você está só visualizando — crie o seu próprio cronograma primeiro');
@@ -474,7 +478,7 @@ menuDropdown?.querySelectorAll('button[data-action]').forEach(button => {
     if (action === 'ferias') openManagerFeriasModal();
     if (action === 'mine') openMineModal();
     if (action === 'calendars') calendarsUI.openMyCalendarsModal();
-    if (action === 'about') document.getElementById('aboutOverlay').classList.add('open');
+    if (action === 'about') openOverlay(document.getElementById('aboutOverlay'));
   });
 });
 
@@ -500,13 +504,13 @@ viewOnlyCreateBtn?.addEventListener('click', async () => {
 const conflictOverlay = document.getElementById('conflictOverlay');
 let pendingSharedId = null;
 document.getElementById('conflictKeep')?.addEventListener('click', () => {
-  conflictOverlay.classList.remove('open');
+  closeOverlay(conflictOverlay);
   pendingSharedId = null;
   cleanURL();
 });
 document.getElementById('conflictLoad')?.addEventListener('click', async () => {
   const id = pendingSharedId;
-  conflictOverlay.classList.remove('open');
+  closeOverlay(conflictOverlay);
   pendingSharedId = null;
   cleanURL();
   if (id && await loadCronogramaById(id, false)) {
@@ -516,9 +520,9 @@ document.getElementById('conflictLoad')?.addEventListener('click', async () => {
 
 /* Sobre */
 const aboutOverlay = document.getElementById('aboutOverlay');
-document.getElementById('aboutClose')?.addEventListener('click', () => aboutOverlay.classList.remove('open'));
+document.getElementById('aboutClose')?.addEventListener('click', () => closeOverlay(aboutOverlay));
 aboutOverlay?.addEventListener('click', event => {
-  if (event.target === aboutOverlay) aboutOverlay.classList.remove('open');
+  if (event.target === aboutOverlay) closeOverlay(aboutOverlay);
 });
 
 /* Férias planejadas — a interface esta aqui; helpers ficam em vacations.js. */
@@ -589,7 +593,7 @@ function updateFeriasPreview() {
 function openManagerFeriasModal() {
   feriasEditandoId = null;
   showFeriasList();
-  feriasOverlay.classList.add('open');
+  openOverlay(feriasOverlay);
 }
 function excluirFerias(id) {
   const before = readFerias();
@@ -603,9 +607,9 @@ function excluirFerias(id) {
 }
 feriasDataInicio.addEventListener('input', updateFeriasPreview);
 feriasQuantidade.addEventListener('input', updateFeriasPreview);
-document.getElementById('feriasClose').addEventListener('click', () => feriasOverlay.classList.remove('open'));
+document.getElementById('feriasClose').addEventListener('click', () => closeOverlay(feriasOverlay));
 feriasOverlay.addEventListener('click', event => {
-  if (event.target === feriasOverlay) feriasOverlay.classList.remove('open');
+  if (event.target === feriasOverlay) closeOverlay(feriasOverlay);
 });
 feriasNewBtn.addEventListener('click', () => openFeriasForm(null));
 feriasFormCancel.addEventListener('click', showFeriasList);
@@ -645,11 +649,11 @@ function openMineModal() {
       ? `Você tem ${total} calendários salvos neste dispositivo.`
       : 'Você tem 1 calendário salvo neste dispositivo.';
   }
-  mineOverlay.classList.add('open');
+  openOverlay(mineOverlay);
 }
-document.getElementById('mineClose').addEventListener('click', () => mineOverlay.classList.remove('open'));
+document.getElementById('mineClose').addEventListener('click', () => closeOverlay(mineOverlay));
 mineOverlay.addEventListener('click', event => {
-  if (event.target === mineOverlay) mineOverlay.classList.remove('open');
+  if (event.target === mineOverlay) closeOverlay(mineOverlay);
 });
 document.getElementById('mineCopy').addEventListener('click', async () => {
   const id = getCloudId();
@@ -693,7 +697,7 @@ document.getElementById('mineShare').addEventListener('click', () => {
     showToast('Você está só visualizando — volte pro seu calendário antes de compartilhar');
     return;
   }
-  mineOverlay.classList.remove('open');
+  closeOverlay(mineOverlay);
   shareSchedule();
 });
 
@@ -745,7 +749,7 @@ async function init() {
             state.pendingSharedOverrides = cloudData.overrides || {};
             state.pendingSharedId = urlId;
             pendingSharedId = urlId;
-            conflictOverlay.classList.add('open');
+            openOverlay(conflictOverlay);
           } else {
             showToast('Cronograma não encontrado');
           }

@@ -1,3 +1,7 @@
+import {
+  closeOverlay
+} from './utils/dom.js';
+
 export function createYearSelector({
     REAL_CURRENT_YEAR,
     getDisplayYear,
@@ -41,7 +45,7 @@ export function createYearSelector({
 
         setDisplayYearState(year);
         yearBtn.textContent = year;
-        yearDropdown.classList.remove('open');
+        closeOverlay(yearDropdown);
         render();
     }
 
@@ -87,7 +91,7 @@ export function createYearSelector({
         });
 
         document.addEventListener('click', () => {
-            yearDropdown.classList.remove('open');
+            closeOverlay(yearDropdown);
         });
 
         yearGo.addEventListener('click', () => {

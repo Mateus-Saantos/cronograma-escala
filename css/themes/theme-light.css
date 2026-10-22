@@ -47,5 +47,27 @@
 
    /* Ícone do GitHub no rodapé (logo já é escura, não precisa inverter) */
    --icon-filter: none;
-   --borderToDay:
+
+   /* Cores exclusivas do topo do calendário */
+   --top-calendar-folga: var(--folga-bg);
+  --top-calendar-trabalho: var(--line);
+  --top-calendar-ferias: var(--line);
+}
+
+/* Deixa o ícone do calendário-seletor azul*/
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(30%) sepia(80%) saturate(2000%) hue-rotate(200deg);
+  cursor: pointer;
+}
+
+.day.today.folga {
+   --borderToDay: var(--folga);
+}
+
+.day.today.trabalho {
+   --borderToDay: var(--trabalho);
+}
+
+.day.today.ferias {
+   --borderToDay: var(--ferias);
 }
