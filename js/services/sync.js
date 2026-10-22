@@ -351,6 +351,62 @@ export function createSyncModule({
     return { ...resultado, status: 'local-adiante' };
   }
 
+  /* ---------- Sobrescrever a nuvem com a versão local ---------- */
+  /*
+   * Resolve um conflito mantendo a versão deste aparelho: substitui
+   * o documento remoto inteiro e atualiza a base de sincronização.
+   * Retorna true em caso de sucesso.
+   */
+  async function sobrescreverNuvemComLocal() {
+    if (salvandoEmAndamento) return false;
+
+    const cloudId = getCloudId();
+
+    if (!cloudId) {
+      showToast(
+        'Este calendário ainda não tem um documento remoto pra salvar.'
+      );
+      return false;
+    }
+
+    if (!cloudDisponivel()) {
+      showToast(
+        'Não foi possível salvar agora. Suas alterações continuam neste dispositivo.'
+      );
+      return false;
+    }
+
+    salvandoEmAndamento = true;
+    updateSaveButton('saving');
+
+    try {
+      const atual = {
+        config: loadConfig(),
+        overrides: loadOverrides(),
+        ferias: loadFerias()
+      };
+
+      await salvarCronograma(atual, cloudId);
+
+      saveSyncedState(atual);
+      clearCalendarDirty();
+      updateSaveButton('saved');
+
+      return true;
+    } catch (e) {
+      console.error('Erro ao sobrescrever a nuvem:', e);
+      updateSaveButton('error');
+
+      showToast(
+        'Não foi possível salvar agora. Suas alterações continuam neste dispositivo.'
+      );
+
+      return false;
+    } finally {
+      salvandoEmAndamento = false;
+    }
+  }
+
   /* ---------- Conexão com a interface ---------- */
 
   function initSyncUI() {
@@ -375,7 +431,7 @@ export function createSyncModule({
     window.hasUnsavedChanges = hasUnsavedChanges;
     window.markCalendarAsDirty = markCalendarAsDirty;
     window.clearCalendarDirty = clearCalendarDirty;
-    window.__verificarDivergencia = verificarDivergencia; // TEMPORÁRIO: remover na Etapa 5
+    window.__verificarDivergencia = sobrescreverNuvemComLocal; // TEMPORÁRIO: remover na Etapa 5
   }
 
   return {
@@ -391,6 +447,7 @@ export function createSyncModule({
     setCloudId,
     cloudDisponivel,
     verificarDivergencia,
+    sobrescreverNuvemComLocal,
     initSyncUI
   };
 }
