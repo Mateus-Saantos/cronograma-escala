@@ -42,6 +42,6 @@ cronograma-escala/
 
   • Atualizar o 'sobre' dos tres pontos
 
-  • Adicionar indicador de diferença do calendario salvo no local storage com o DB, sugerindo sincronização com o DB (carregar e usar a versão salva no DB)
+  • Adicionar indicador de diferença do calendario salvo no local storage com o DB, sugerindo sincronização com o DB (carregar e usar a versão salva no DB) *em andamento
 
   • Adicionar a opção excluir calendario com confirmação. A confirmação de exclusão deve exigir que o usuario digite apenas o nome do calendario e clicar em 'confirmar'

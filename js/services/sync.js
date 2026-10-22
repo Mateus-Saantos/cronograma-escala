@@ -17,8 +17,10 @@
 
 import {
   atualizarCronograma,
+  carregarCronogramaPorId,
   salvarCronograma
 } from './firebase.js';
+import { mesmoEstado } from '../utils/compare.js';
 
 export function createSyncModule({
   getActiveCalendarId,
@@ -30,7 +32,8 @@ export function createSyncModule({
   loadOverrides,
   loadFerias,
   registrarCalendario,
-  showToast
+  showToast,
+  DEFAULT_CONFIG
 }) {
   /* ---------- Estado de alterações não salvas ---------- */
 
@@ -268,6 +271,86 @@ export function createSyncModule({
     return navigator.onLine;
   }
 
+    /* ---------- Divergência local × nuvem ---------- */
+  /*
+   * Compara três estados: base (último sincronizado neste aparelho),
+   * local (localStorage) e nuvem (Firestore).
+   *
+   * Status possíveis:
+   * 'sem-nuvem'        calendário sem documento remoto (ou não encontrado)
+   * 'offline'          sem conexão ou falha ao consultar a nuvem
+   * 'cancelado'        o calendário ativo mudou durante a consulta
+   * 'igual'            local e nuvem idênticos
+   * 'local-adiante'    só o local mudou (fluxo normal do botão Salvar)
+   * 'nuvem-atualizada' só a nuvem mudou (seguro carregar a nuvem)
+   * 'conflito'         os dois mudaram, ou não há base para saber
+   *
+   * Efeito colateral: quando local e nuvem são idênticos e a base
+   * está ausente ou desatualizada, a base passa a ser a nuvem.
+   */
+  async function verificarDivergencia() {
+    const idInicial = getActiveCalendarId();
+    const cloudId = getCloudId();
+
+    if (!cloudId) return { status: 'sem-nuvem' };
+    if (!cloudDisponivel()) return { status: 'offline' };
+
+    let remoto;
+
+    try {
+      remoto = await carregarCronogramaPorId(cloudId);
+    } catch (e) {
+      console.error('Erro ao consultar a nuvem:', e);
+      return { status: 'offline' };
+    }
+    if (getActiveCalendarId() !== idInicial) {
+      return { status: 'cancelado' };
+    }
+
+    if (!remoto || !remoto.config) return { status: 'sem-nuvem' };
+
+    const normalizar = (estado) => ({
+      config: { ...DEFAULT_CONFIG, ...(estado.config || {}) },
+      overrides: estado.overrides || {},
+      ferias: estado.ferias || []
+    });
+
+    const nuvem = normalizar(remoto);
+
+    const local = normalizar({
+      config: loadConfig(),
+      overrides: loadOverrides(),
+      ferias: loadFerias()
+    });
+
+    const sincronizado = loadSyncedState();
+    const base = sincronizado ? normalizar(sincronizado) : null;
+
+    const resultado = { cloudId, nuvem, local };
+
+    if (mesmoEstado(local, nuvem)) {
+      if (!base || !mesmoEstado(base, nuvem)) {
+        saveSyncedState(nuvem);
+      }
+      return { ...resultado, status: 'igual' };
+    }
+    if (!base) {
+      return { ...resultado, status: 'conflito' };
+    }
+
+    const nuvemMudou = !mesmoEstado(base, nuvem);
+    const localMudou = !mesmoEstado(base, local);
+
+    if (nuvemMudou && localMudou) {
+      return { ...resultado, status: 'conflito' };
+    }
+    if (nuvemMudou) {
+      return { ...resultado, status: 'nuvem-atualizada' };
+    }
+
+    return { ...resultado, status: 'local-adiante' };
+  }
+
   /* ---------- Conexão com a interface ---------- */
 
   function initSyncUI() {
@@ -292,6 +375,7 @@ export function createSyncModule({
     window.hasUnsavedChanges = hasUnsavedChanges;
     window.markCalendarAsDirty = markCalendarAsDirty;
     window.clearCalendarDirty = clearCalendarDirty;
+    window.__verificarDivergencia = verificarDivergencia; // TEMPORÁRIO: remover na Etapa 5
   }
 
   return {
@@ -306,6 +390,7 @@ export function createSyncModule({
     getCloudId,
     setCloudId,
     cloudDisponivel,
+    verificarDivergencia,
     initSyncUI
   };
 }

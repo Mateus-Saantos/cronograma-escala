@@ -166,7 +166,8 @@ const sync = createSyncModule({
   loadOverrides: readOverrides,
   loadFerias: readFerias,
   registrarCalendario: registerCalendar,
-  showToast
+  showToast,
+  DEFAULT_CONFIG
 });
 const {
   markCalendarAsDirty, clearCalendarDirty,
