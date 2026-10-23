@@ -348,8 +348,6 @@ function switchToCalendar(localId) {
   checarNuvem();
 }
 window.switchToCalendar = switchToCalendar;
-window.__usarNuvem = () => loadCronogramaById(getCloudId(), true); // TEMPORÁRIO: remover na Etapa 5
-window.__checarNuvem = checarNuvem; // TEMPORÁRIO: remover na Etapa 5
 
 async function criarNovoCalendarioLocal(nome, tipo) {
   if (!cloudDisponivel()) {

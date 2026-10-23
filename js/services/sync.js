@@ -448,7 +448,6 @@ export function createSyncModule({
     window.hasUnsavedChanges = hasUnsavedChanges;
     window.markCalendarAsDirty = markCalendarAsDirty;
     window.clearCalendarDirty = clearCalendarDirty;
-    window.__verificarDivergencia = sobrescreverNuvemComLocal; // TEMPORÁRIO: remover na Etapa 5
   }
 
   return {

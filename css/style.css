@@ -699,7 +699,19 @@ footer {
   line-height: 1;
 }
 
-
+#syncBanner{
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50%;
+  background-color: var(--panel);
+  padding: 10px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text);
+  z-index: 9999;
+}
 /* ===== Modo visualização (link de outra pessoa, sem virar dono) ===== */
 .view-only-banner {
   display: none;

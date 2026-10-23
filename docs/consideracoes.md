@@ -33,6 +33,7 @@ cronograma-escala/
     │   └── shell/       menu.js, theme.js, layout.js, about-modal.js, view-only-banner.js
     └── utils/  ✔
         ├── dom.js  ✔
+        ├── compare.js  ✔
         └── favicon.js  ✔
 
 >> ATENÇÃO
@@ -45,3 +46,5 @@ cronograma-escala/
   • Adicionar indicador de diferença do calendario salvo no local storage com o DB, sugerindo sincronização com o DB (carregar e usar a versão salva no DB) *em andamento
 
   • Adicionar a opção excluir calendario com confirmação. A confirmação de exclusão deve exigir que o usuario digite apenas o nome do calendario e clicar em 'confirmar'
+
+  • Privacidade da rotina: mesmo sem informações sensíveis, uma escala pode revelar horários de trabalho e folgas. Vale evitar que os cronogramas sejam listados publicamente ou que alguém consiga alterá-los sem autorização.
