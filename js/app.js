@@ -15,6 +15,7 @@ import { state } from './state.js';
 import { createDayModal } from './day-modal.js';
 import { initCalendarsUI } from './calendars-ui.js';
 import { createSyncModule } from './services/sync.js';
+import { createSyncConflictUI } from './sync-conflict-ui.js';
 import { createCalendarUI } from './ui.js';
 import { createYearSelector } from './year-selector.js';
 import { createSettingsModule } from './settings.js';
@@ -172,8 +173,16 @@ const sync = createSyncModule({
 const {
   markCalendarAsDirty, clearCalendarDirty,
   updateDirtyIndicator, saveSyncedState, getCloudId, setCloudId,
-  cloudDisponivel, initSyncUI
+  cloudDisponivel, initSyncUI,
+  hasUnsavedChanges, verificarDivergencia, sobrescreverNuvemComLocal
 } = sync;
+
+const { checarNuvem, esconderAviso } = createSyncConflictUI({
+  verificarDivergencia,
+  sobrescreverNuvemComLocal,
+  hasUnsavedChanges,
+  usarNuvem: () => loadCronogramaById(getCloudId(), true)
+});
 
 function updateHeader() {
   const h1 = document.querySelector('header h1');
@@ -335,9 +344,12 @@ function switchToCalendar(localId) {
   updateHeader();
   updateViewOnlyBanner();
   render();
+  esconderAviso();
+  checarNuvem();
 }
 window.switchToCalendar = switchToCalendar;
 window.__usarNuvem = () => loadCronogramaById(getCloudId(), true); // TEMPORÁRIO: remover na Etapa 5
+window.__checarNuvem = checarNuvem; // TEMPORÁRIO: remover na Etapa 5
 
 async function criarNovoCalendarioLocal(nome, tipo) {
   if (!cloudDisponivel()) {
@@ -722,6 +734,16 @@ function initTheme() {
   adjust();
 }
 
+let ultimaChecagemNuvem = 0;
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (Date.now() - ultimaChecagemNuvem < 30000) return;
+
+  ultimaChecagemNuvem = Date.now();
+  checarNuvem();
+});
+
 async function init() {
   migrarParaMeusCalendarios({
     ...calendarDependencies,
@@ -777,5 +799,6 @@ async function init() {
   render();
   const todayElement = document.querySelector('.day.today');
   if (todayElement) todayElement.scrollIntoView({ behavior: 'instant', block: 'center' });
+  if (!urlId && myCloudId) checarNuvem();
 }
 init();

@@ -170,6 +170,23 @@ export function createSyncModule({
     updateSaveButton('saving');
 
     try {
+
+      const divergencia = await verificarDivergencia();
+
+      if (
+        divergencia.status === 'conflito' ||
+        divergencia.status === 'nuvem-atualizada'
+      ) {
+        updateSaveButton('idle');
+        document.dispatchEvent(new CustomEvent('sync:divergencia'));
+
+        showToast(
+          'A nuvem foi alterada em outro dispositivo. Resolva antes de salvar.'
+        );
+
+        return;
+      }
+
       const atual = {
         config: loadConfig(),
         overrides: loadOverrides(),
@@ -271,7 +288,7 @@ export function createSyncModule({
     return navigator.onLine;
   }
 
-    /* ---------- Divergência local × nuvem ---------- */
+  /* ---------- Divergência local × nuvem ---------- */
   /*
    * Compara três estados: base (último sincronizado neste aparelho),
    * local (localStorage) e nuvem (Firestore).

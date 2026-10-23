@@ -65,6 +65,11 @@
     <button id="viewOnlyCreateBtn" type="button">Criar o meu</button>
   </div>
 
+  <div id="syncBanner" class="view-only-banner">
+    <span>A nuvem tem uma versão diferente deste calendário</span>
+    <button id="syncBannerBtn" type="button">Resolver</button>
+  </div>
+
   <div id="calendar"></div>
 
   <footer>
@@ -161,6 +166,20 @@
       <div class="modal-actions">
         <button id="conflictKeep" type="button" class="btn-ghost">Manter minha escala</button>
         <button id="conflictLoad" type="button" class="btn-save">Carregar escala</button>
+      </div>
+    </div>
+  </div>
+
+    <!-- Modal de divergência com a nuvem -->
+  <div id="syncConflictOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="syncConflictClose" class="modal-close" type="button">&times;</button>
+      <h2>Versões diferentes</h2>
+      <p class="conflict-text">A versão deste calendário na nuvem é diferente da que está neste aparelho.</p>
+      <p class="conflict-text"><strong>Usar a nuvem</strong> descarta as alterações deste aparelho. <strong>Manter o meu</strong> substitui a versão da nuvem pela deste aparelho.</p>
+      <div class="modal-actions">
+        <button id="syncConflictKeep" type="button" class="btn-ghost">Manter o meu</button>
+        <button id="syncConflictUse" type="button" class="btn-save">Usar a nuvem</button>
       </div>
     </div>
   </div>
