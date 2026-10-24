@@ -6,7 +6,7 @@ import { initializeApp }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 
 // Firestore vem de um pacote separado do firebase-app.js
-import { getFirestore, doc, setDoc, getDoc, updateDoc }
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -68,9 +68,30 @@ async function atualizarCronograma(id, campos) {
   await updateDoc(doc(db, "cronogramas", id), campos);
 }
 
+/** ======================================================================== 
+ * Exclui um cronograma da nuvem: o documento principal ("cronogramas")
+ * e o resumo em "indice_cronogramas".
+ * - Falha no documento principal: lança o erro (nada foi excluído).
+ * - Falha só no índice: apenas registra aviso, pois é um resumo auxiliar.
+ * deleteDoc não gera erro se o documento já não existir, então repetir
+ * a exclusão é seguro.
+ ======================================================================== */
+async function excluirCronograma(id) {
+  if (!id) return;
+
+  await deleteDoc(doc(db, "cronogramas", id));
+
+  try {
+    await deleteDoc(doc(db, "indice_cronogramas", id));
+  } catch (e) {
+    console.warn("Não foi possível excluir o índice do cronograma:", e);
+  }
+}
+
 export {
   salvarCronograma, //app, settings, sync
   carregarCronogramaPorId, //app
   salvarIndice, //app, settings
-  atualizarCronograma //sync
+  atualizarCronograma, //sync
+  excluirCronograma 
 };
