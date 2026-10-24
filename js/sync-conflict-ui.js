@@ -49,7 +49,6 @@ export function createSyncConflictUI({
 
     try {
       const resultado = await verificarDivergencia();
-      console.log('[SYNC] Resultado da verificação:', resultado);
 
       if (resultado.status === 'conflito') {
         showBanner();

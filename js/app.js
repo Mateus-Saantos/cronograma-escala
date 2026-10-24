@@ -9,7 +9,7 @@ import {
 } from './services/storage.js';
 import {
   gerarCalendarioId, calendarStorageKey, getMyCalendars,
-  registrarCalendario, getActiveCalendarId, migrarParaMeusCalendarios
+  registrarCalendario, getActiveCalendarId
 } from './calendars.js';
 import { state } from './state.js';
 import { createDayModal } from './day-modal.js';
@@ -51,7 +51,7 @@ const FERIAS_STORAGE_KEY = 'escala-ferias';
 const DIRTY_STORAGE_KEY = 'escala-dirty';
 const SYNCED_STATE_STORAGE_KEY = 'escala-synced-state';
 const THEME_STORAGE_KEY = 'escala-tema';
-const MY_CALENDARS_STORAGE_KEY = 'escala-meus-calendarios';
+const MY_CALENDARS_STORAGE_KEY = 'escala-meus-calendarios'; //Lista de calendarios no dispositivo
 const ACTIVE_CALENDAR_STORAGE_KEY = 'escala-calendario-ativo';
 
 const hoje = new Date();
@@ -156,7 +156,17 @@ function registerCalendar(localId, data) {
 function activeCalendarId() {
   return getActiveCalendarId({ ACTIVE_CALENDAR_STORAGE_KEY });
 }
+function hasActiveCalendar() {
+  return Boolean(activeCalendarId());
+}
 
+// Sem calendário ativo (e fora do modo de visualização), mostra o estado vazio.
+// Chamada de dentro de updateHeader(), que já roda em todo fluxo
+// que troca, cria ou carrega um calendário.
+function updateEmptyState() {
+  const vazio = !hasActiveCalendar() && !state.isViewOnly;
+  document.body.classList.toggle('no-calendar', vazio);
+}
 const sync = createSyncModule({
   getActiveCalendarId: activeCalendarId,
   calendarStorageKey,
@@ -185,6 +195,8 @@ const { checarNuvem, esconderAviso } = createSyncConflictUI({
 });
 
 function updateHeader() {
+  atualizarBotoesSemCalendario();
+
   const h1 = document.querySelector('header h1');
   if (h1) h1.textContent = getCurrentConfig().nome || 'Cronograma de Escala';
   const eyebrow = document.querySelector('.eyebrow');
@@ -196,6 +208,9 @@ function updateHeader() {
   if (eyebrow) eyebrow.textContent = labels[getCurrentConfig().tipo] || 'Escala';
   const yearBtn = document.getElementById('yearBtn');
   if (yearBtn) yearBtn.textContent = displayYear;
+  updateDirtyIndicator();
+    if (yearBtn) yearBtn.textContent = displayYear;
+  updateEmptyState();
   updateDirtyIndicator();
   sync.updateSaveButton('idle');
 }
@@ -298,12 +313,8 @@ async function loadCronogramaById(id, asOwner) {
     state.viewOnlyId = null;
 
     const existing = myCalendars().find(calendar => calendar.cloudId === id);
-    const activeIsEmpty = !getCloudId() && !storedConfigExists();
-    let localId;
-    if (existing) localId = existing.localId;
-    else if (activeIsEmpty) localId = activeCalendarId();
-    else localId = gerarCalendarioId();
-
+    const localId = existing ? existing.localId : gerarCalendarioId();
+    
     localStorage.setItem(ACTIVE_CALENDAR_STORAGE_KEY, localId);
     writeConfig(getCurrentConfig());
     writeOverrides(cloudData.overrides || {});
@@ -484,8 +495,8 @@ menuDropdown?.querySelectorAll('button[data-action]').forEach(button => {
     event.stopPropagation();
     closeOverlay(menuDropdown);
     const action = button.dataset.action;
-    if (state.isViewOnly && (action === 'config' || action === 'ferias')) {
-      showToast('Você está só visualizando — crie o seu próprio cronograma primeiro');
+    if (!hasActiveCalendar() && (action === 'config' || action === 'ferias' || action === 'mine')) {
+      showToast('Crie ou carregue um calendário primeiro');
       return;
     }
     if (action === 'config') settings.openSettings('edit');
@@ -508,10 +519,20 @@ viewOnlyCreateBtn?.addEventListener('click', async () => {
   if (myId) {
     await loadCronogramaById(myId, true);
     showToast('Voltando pro seu cronograma');
+  } else if (!hasActiveCalendar()) {
+    document.getElementById('myCalendarsNewBtn')?.click();
   } else {
     switchToCalendar(activeCalendarId());
     showToast('Voltando pro seu calendário');
   }
+});
+
+document.getElementById('emptyCreateBtn')?.addEventListener('click', () => {
+  document.getElementById('myCalendarsNewBtn')?.click();
+});
+
+document.getElementById('emptyLoadBtn')?.addEventListener('click', () => {
+  document.getElementById('myCalendarsLoadBtn')?.click();
 });
 
 /* Conflito ao abrir um link compartilhado com outro calendário local. */
@@ -651,6 +672,16 @@ feriasFormSave.addEventListener('click', () => {
   showToast('Férias salvas!');
 });
 
+function atualizarBotoesSemCalendario() {
+  const calendarios = JSON.parse(
+    localStorage.getItem('escala-meus-calendarios') || '[]'
+  );
+  document.body.classList.toggle(
+    'no-calendar',
+    calendarios.length === 0
+  );
+}
+
 /* Meu ID e compartilhamento */
 const mineOverlay = document.getElementById('mineOverlay');
 const mineId = document.getElementById('mineId');
@@ -682,6 +713,7 @@ document.getElementById('mineCopy').addEventListener('click', async () => {
     window.prompt('Copie o ID:', id);
   }
 });
+
 async function shareSchedule() {
   if (!cloudDisponivel()) {
     showToast('Recurso online indisponível agora');
@@ -745,13 +777,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function init() {
-  migrarParaMeusCalendarios({
-    ...calendarDependencies,
-    CONFIG_STORAGE_KEY,
-    OVERRIDES_STORAGE_KEY,
-    FERIAS_STORAGE_KEY,
-    CLOUD_ID_STORAGE_KEY
-  });
+  atualizarBotoesSemCalendario();
   setCurrentConfig(readConfig());
   initTheme();
   updateCalendarLayout();
@@ -790,7 +816,6 @@ async function init() {
   } else {
     updateHeader();
     render();
-    settings.openSettings('create');
     return;
   }
 

@@ -75,6 +75,15 @@
 
   <div id="calendar"></div>
 
+  <div id="emptyState" class="empty-state">
+    <h2>Nenhum calendário</h2>
+    <p>Crie um novo calendário ou carregue um que já existe.</p>
+    <div class="empty-state-actions">
+      <button id="emptyCreateBtn" type="button" class="btn-save">Criar calendário</button>
+      <button id="emptyLoadBtn" type="button" class="btn-ghost">Carregar calendário</button>
+    </div>
+  </div>
+
   <footer>
     <p>
       Projeto iniciado em 08/08/2026 <br> Desenvolvido para facilitar a consulta e organização dos dias de trabalho e
@@ -284,7 +293,6 @@
   </div>
 
   <!-- FIM MENUS -->
-
   <div id="toast" class="toast"></div>
 
   <button id="backToTodayBtn" class="back-to-today" type="button" aria-label="Voltar para hoje">

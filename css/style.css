@@ -709,6 +709,10 @@ footer {
   line-height: 1;
 }
 
+body.no-calendar .back-to-today {
+  display: none;
+}
+
 #syncBanner {
   position: fixed;
   bottom: 12px;
@@ -717,7 +721,7 @@ footer {
   width: max-content;
   max-width: calc(100% - 24px);
   box-sizing: border-box;
-  display: flex;
+  display: none; 
   align-items: center;
   justify-content: center;
   gap: 10px;
@@ -728,6 +732,9 @@ footer {
   text-align: center;
   border-radius: 10px;
   z-index: 9999;
+}
+#syncBanner.show {
+  display: flex;
 }
 #syncBanner span {
   flex: 0 1 auto;
@@ -884,7 +891,48 @@ footer {
   background: transparent;
 }
 
+/* Estado vazio: nenhum calendário registrado */
+.empty-state {
+  display: none;
+  margin-top: 30%;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-state h2 {
+  color: var(--text);
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.empty-state-actions {
+  display: flex;
+  gap: 10px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+body.no-calendar #calendar,
+body.no-calendar .legend {
+  display: none;
+}
+
+body.no-calendar .empty-state {
+  display: block;
+}
+
 @media (min-width: 1440px) {
+  #calendar {
+    margin-top: 23% !important;
+  }
+  .empty-state {
+    margin-top: 23% !important;
+  }
   /* Desktop */
   body {
     margin: 170px 0 0;
@@ -941,11 +989,11 @@ footer {
     font-size: 12px;
   }
   .day {
-    aspect-ratio: 1.2;
+    aspect-ratio: 1.30;
   }
 }
 
-@media (max-width: 1199px) {
+@media (max-height: 730px) {
   .day {
     aspect-ratio: 1.5;
   }
