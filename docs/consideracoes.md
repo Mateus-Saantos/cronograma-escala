@@ -37,14 +37,18 @@ cronograma-escala/
         └── favicon.js  ✔
 
 >> ATENÇÃO
+<!-- BACKLOG -->
   • Os comentários dos dias são inseridos no atributo HTML title, com as aspas duplas escapadas. Como esse conteúdo vem do usuário, vale revisar a forma de construir esse atributo e testar comentários com caracteres especiais. Não alterei isso nesta etapa, pois nosso objetivo agora é preservar o comportamento
 
   • Em manager.js, dados vindos da nuvem (item.nome, item.tipo e item.id) são inseridos diretamente em innerHTML. Se esses valores contiverem HTML malicioso, existe risco de injeção de conteúdo.
 
   • Atualizar o 'sobre' dos tres pontos
 
-  • Adicionar indicador de diferença do calendario salvo no local storage com o DB, sugerindo sincronização com o DB (carregar e usar a versão salva no DB) *em andamento
+  • Privacidade da rotina: mesmo sem informações sensíveis, uma escala pode revelar horários de trabalho e folgas. Vale evitar que os cronogramas sejam listados publicamente ou que alguém consiga alterá-los sem autorização.
 
+  • Definir e corrir como deve funcionar o nome do calendario e o nome do usuário(como deseja ser chamado) onde deve ser visivel e por que.
+<!-- EM ANDAMENTO -->
   • Adicionar a opção excluir calendario com confirmação. A confirmação de exclusão deve exigir que o usuario digite apenas o nome do calendario e clicar em 'confirmar'
 
-  • Privacidade da rotina: mesmo sem informações sensíveis, uma escala pode revelar horários de trabalho e folgas. Vale evitar que os cronogramas sejam listados publicamente ou que alguém consiga alterá-los sem autorização.
+<!-- CONCLUÍDO -->
+  • Adicionar indicador de diferença do calendario salvo no local storage com o DB, sugerindo sincronização com o DB (carregar e usar a versão salva no DB)

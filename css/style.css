@@ -639,18 +639,28 @@ footer {
   left: 50%;
   bottom: 28px;
   transform: translate(-50%, 12px);
+
+  /* Largura responsiva */
+  width: max-content;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+  /* ======================= */
   background: var(--panel);
   border: 1px solid var(--folga-border);
   color: var(--text);
   padding: 10px 18px;
-  border-radius: 999px;
+  border-radius: 16px;
   font-size: 13px;
   font-family: var(--mono);
+  /* Permite quebrar o texto */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  /* ======================= */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
   z-index: 3000;
-  white-space: nowrap;
 }
 
 .toast.show {
@@ -699,19 +709,34 @@ footer {
   line-height: 1;
 }
 
-#syncBanner{
+#syncBanner {
   position: fixed;
-  bottom: 0;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-  width: 50%;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
   background-color: var(--panel);
-  padding: 10px;
-  text-align: center;
-  font-size: 13px;
   color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  border-radius: 10px;
   z-index: 9999;
 }
+#syncBanner span {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+#syncBanner button {
+  flex-shrink: 0;
+}
+
 /* ===== Modo visualização (link de outra pessoa, sem virar dono) ===== */
 .view-only-banner {
   display: none;
@@ -859,7 +884,7 @@ footer {
   background: transparent;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1440px) {
   /* Desktop */
   body {
     margin: 170px 0 0;
@@ -902,26 +927,26 @@ footer {
     font-size: 14px !important;
   }
   .weekdays div {
-  font-size: 15px;
-  margin-bottom: 20px;
+    font-size: 15px;
+    margin-bottom: 20px;
   }
   .month-count {
-  font-size: 13px;
+    font-size: 13px;
   }
   .month-title {
-   padding: 0 20px 0;
+    padding: 0 20px 0;
   }
   .legend {
     margin: 0 0 20px;
     font-size: 12px;
   }
   .day {
-  aspect-ratio: 1.12;
+    aspect-ratio: 1.2;
   }
 }
 
-@media (min-width: 795px) {
+@media (max-width: 1199px) {
   .day {
-  aspect-ratio: 1.5;
+    aspect-ratio: 1.5;
   }
 }
