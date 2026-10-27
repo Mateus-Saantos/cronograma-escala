@@ -1,0 +1,81 @@
+@media (min-width: 1440px) {
+  #calendar {
+    margin-top: 23%;
+  }
+  .empty-state {
+    margin-top: 23%;
+  }
+  /* Desktop */
+  body {
+    margin: 170px 0 0;
+    padding: 0 25%;
+  }
+  .view-only-banner {
+    margin-top: 210px;
+  }
+  .menu_superior {
+    padding-top: 15px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    background-color: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .eyebrow {
+    font-size: 15px;
+  }
+  .menu-wrap {
+    top: 20px;
+    right: 25%;
+  }
+  #calendar {
+    margin-top: 23%;
+  }
+  footer {
+    margin: 5% 25%;
+  }
+  .back-to-today {
+    left: 48%;
+  }
+  .day {
+    font-size: 20px;
+  }
+  .pin {
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  .weekdays div {
+    font-size: 15px;
+    margin-bottom: 20px;
+  }
+  .month-count {
+    font-size: 13px;
+  }
+  .month-title {
+    padding: 0 20px 0;
+  }
+  .legend {
+    margin: 0 0 20px;
+    font-size: 12px;
+  }
+  .day {
+    aspect-ratio: 1.30;
+  }
+}
+
+@media (max-height: 730px) {
+  .day {
+    aspect-ratio: 1.5;
+  }
+}
+
+@media (max-width: 374px) {
+/* Botão flutuante: voltar pro dia atual */
+  .back-to-today {
+    top: 190px;
+    padding: 5px 10px 5px 9px;
+    font-size: 12px;
+  }
+}
