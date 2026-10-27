@@ -21,6 +21,7 @@ import { createYearSelector } from './year-selector.js';
 import { createSettingsModule } from './settings.js';
 import { calculateScheduleDate } from './core/schedule.js';
 import { atualizarFaviconDoDia } from './utils/favicon.js';
+import { createCalendarDeleter } from './calendar-delete.js';
 import { showToast, openOverlay, closeOverlay } from './utils/dom.js';
 import { parseLocalDateKey, dateKey, isSameDay, daysBetween } from './core/dates.js';
 import { gerarFeriasId, getFeriasParaData, formatFeriasRange } from './core/vacations.js';
@@ -194,6 +195,24 @@ const { checarNuvem, esconderAviso } = createSyncConflictUI({
   usarNuvem: () => loadCronogramaById(getCloudId(), true)
 });
 
+const calendarDeleter = createCalendarDeleter({
+  calendarDependencies,
+  ACTIVE_CALENDAR_STORAGE_KEY,
+  storageKeyBases: {
+    CONFIG_STORAGE_KEY,
+    OVERRIDES_STORAGE_KEY,
+    FERIAS_STORAGE_KEY,
+    CLOUD_ID_STORAGE_KEY,
+    DIRTY_STORAGE_KEY,
+    SYNCED_STATE_STORAGE_KEY
+  },
+  cloudDisponivel,
+  switchToCalendar,
+  onNoCalendars: showNoCalendarsState
+});
+
+window.__excluirCalendario = (id) => calendarDeleter.excluirCalendario(id); // TEMPORÁRIO: remover na Etapa 4
+
 function updateHeader() {
   atualizarBotoesSemCalendario();
 
@@ -314,7 +333,7 @@ async function loadCronogramaById(id, asOwner) {
 
     const existing = myCalendars().find(calendar => calendar.cloudId === id);
     const localId = existing ? existing.localId : gerarCalendarioId();
-    
+
     localStorage.setItem(ACTIVE_CALENDAR_STORAGE_KEY, localId);
     writeConfig(getCurrentConfig());
     writeOverrides(cloudData.overrides || {});
@@ -358,6 +377,16 @@ function switchToCalendar(localId) {
   esconderAviso();
   checarNuvem();
 }
+
+// Chamada pela exclusão quando o último calendário é removido.
+function showNoCalendarsState() {
+  setCurrentConfig(readConfig());
+  updateHeader();
+  updateViewOnlyBanner();
+  render();
+  esconderAviso();
+}
+
 window.switchToCalendar = switchToCalendar;
 window.__usarNuvem = () => loadCronogramaById(getCloudId(), true); // TEMPORÁRIO: remover na Etapa 5
 window.__checarNuvem = checarNuvem; // TEMPORÁRIO: remover na Etapa 5

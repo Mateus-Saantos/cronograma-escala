@@ -72,6 +72,23 @@ export function registrarCalendario(localId, dados, dependencies) {
   saveMyCalendars(lista, dependencies);
 }
 
+/* ---------- Remoção do registro ---------- */
+
+// Remove um calendário do registro "Meus Calendários".
+// Retorna a entrada removida, ou null se o localId não existir.
+// Não apaga as chaves de dados do calendário nem altera o ativo.
+export function removerCalendarioDoRegistro(localId, dependencies) {
+  const lista = getMyCalendars(dependencies);
+  const idx = lista.findIndex(c => c.localId === localId);
+
+  if (idx === -1) return null;
+
+  const [removido] = lista.splice(idx, 1);
+  saveMyCalendars(lista, dependencies);
+
+  return removido;
+}
+
 /* ---------- Calendário ativo ---------- */
 export function getActiveCalendarId({
   storage = localStorage,

@@ -721,7 +721,7 @@ body.no-calendar .back-to-today {
   width: max-content;
   max-width: calc(100% - 24px);
   box-sizing: border-box;
-  display: none; 
+  display: none;
   align-items: center;
   justify-content: center;
   gap: 10px;
@@ -996,5 +996,14 @@ body.no-calendar .empty-state {
 @media (max-height: 730px) {
   .day {
     aspect-ratio: 1.5;
+  }
+}
+
+@media (max-width: 374px) {
+/* Botão flutuante: voltar pro dia atual */
+  .back-to-today {
+    top: 190px;
+    padding: 5px 10px 5px 9px;
+    font-size: 12px;
   }
 }
