@@ -6,7 +6,7 @@ import { initializeApp }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 
 // Firestore vem de um pacote separado do firebase-app.js
-import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc }
+import { getFirestore, doc, setDoc, getDoc, updateDoc }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -67,22 +67,53 @@ async function salvarIndice(id, resumo) {
 async function atualizarCronograma(id, campos) {
   await updateDoc(doc(db, "cronogramas", id), campos);
 }
+// Tempo máximo (ms) para o servidor confirmar uma exclusão.
+const TEMPO_LIMITE_EXCLUSAO_MS = 10000;
 
-/** ======================================================================== 
+/**
+ * Exclui um documento pela API REST do Firestore.
+ * Diferente do deleteDoc do SDK (que enfileira a operação quando o servidor
+ * está inacessível e só resolve quando ele confirma, sem prazo), aqui o
+ * resultado é sempre imediato: confirmado, recusado ou tempo esgotado.
+ * Apagar um documento que não existe também retorna sucesso.
+ */
+async function excluirDocumentoRest(colecao, id) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TEMPO_LIMITE_EXCLUSAO_MS);
+
+  try {
+    const url =
+      `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}` +
+      `/databases/(default)/documents/${colecao}/${encodeURIComponent(id)}` +
+      `?key=${firebaseConfig.apiKey}`;
+
+    const resposta = await fetch(url, {
+      method: "DELETE",
+      signal: controller.signal
+    });
+
+    if (!resposta.ok) {
+      throw new Error(`Exclusão recusada (HTTP ${resposta.status})`);
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Exclui um cronograma da nuvem: o documento principal ("cronogramas")
  * e o resumo em "indice_cronogramas".
  * - Falha no documento principal: lança o erro (nada foi excluído).
  * - Falha só no índice: apenas registra aviso, pois é um resumo auxiliar.
- * deleteDoc não gera erro se o documento já não existir, então repetir
- * a exclusão é seguro.
- ======================================================================== */
+ * A exclusão é idempotente, então repetir é seguro.
+ */
 async function excluirCronograma(id) {
   if (!id) return;
 
-  await deleteDoc(doc(db, "cronogramas", id));
+  await excluirDocumentoRest("cronogramas", id);
 
   try {
-    await deleteDoc(doc(db, "indice_cronogramas", id));
+    await excluirDocumentoRest("indice_cronogramas", id);
   } catch (e) {
     console.warn("Não foi possível excluir o índice do cronograma:", e);
   }
@@ -93,5 +124,5 @@ export {
   carregarCronogramaPorId, //app
   salvarIndice, //app, settings
   atualizarCronograma, //sync
-  excluirCronograma 
+  excluirCronograma
 };

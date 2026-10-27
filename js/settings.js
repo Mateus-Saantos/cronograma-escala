@@ -1,9 +1,4 @@
 import {
-    salvarCronograma,
-    salvarIndice
-} from './services/firebase.js';
-
-import {
   openOverlay,
   closeOverlay
 } from './utils/dom.js';
@@ -31,7 +26,8 @@ export function createSettingsModule({
     showToast,
     getMyCalendars,
     switchToCalendar,
-    loadCronogramaById
+    loadCronogramaById,
+    criarNovoCalendarioLocal
 }) {
     const settingsOverlay = document.getElementById('settingsOverlay');
     const settingsClose = document.getElementById('settingsClose');
@@ -67,19 +63,15 @@ export function createSettingsModule({
         const radio = document.querySelector(
             `input[name="cfgRefStatus"][value="${config.referenceStatus}"]`
         );
-
         if (radio) radio.checked = true;
-
         updateSettingsVisibility();
     }
 
     function openSettings(mode) {
         settingsMode = mode || 'edit';
-
         if (cfgTemaSelect) {
             cfgTemaSelect.value = loadTheme();
         }
-
         if (settingsMode === 'create') {
             settingsTitle.textContent = 'Configure seu cronograma';
             settingsSave.textContent = 'Criar meu cronograma';
@@ -91,35 +83,28 @@ export function createSettingsModule({
             settingsLoadExisting.style.display = 'none';
             fillSettingsForm(getCurrentConfig());
         }
-
         openOverlay(settingsOverlay);
     }
-
     function closeSettings() {
         closeOverlay(settingsOverlay);
     }
 
-    /*
+    /* ============================================================
      * Fluxo único para carregar um calendário existente pelo ID.
-     */
+     =========================================================== */
     async function carregarCalendarioPorPrompt() {
         const idDigitado = window.prompt(
             'Cole aqui o ID do calendário que você recebeu:'
         );
-
         if (!idDigitado) return false;
-
         const id = idDigitado.trim().toUpperCase();
-
         const existente = getMyCalendars().find(
             calendario => calendario.cloudId === id
         );
-
         if (existente) {
             const abrir = window.confirm(
                 'Este calendário já está neste dispositivo.\n\nDeseja abri-lo agora?'
             );
-
             if (abrir) {
                 switchToCalendar(existente.localId);
                 showToast(
@@ -127,16 +112,12 @@ export function createSettingsModule({
                 );
                 return true;
             }
-
             return false;
         }
-
         const ok = await loadCronogramaById(id, true);
-
         if (ok) {
             showToast('Calendário carregado!');
         }
-
         return ok;
     }
 
@@ -190,64 +171,28 @@ export function createSettingsModule({
                 }
             };
 
-            if (settingsMode === 'create') {
-                if (!cloudDisponivel()) {
-                    showToast(
-                        'Recurso online indisponível — não é possível criar agora'
-                    );
+                        if (settingsMode === 'create') {
+                if (!newConfig.nome) {
+                    showToast('Dê um nome pro calendário');
                     return;
                 }
 
-                showToast('Criando cronograma...');
+                settingsSave.disabled = true;
+                showToast('Criando calendário...');
 
                 try {
-                    const novoId =
-                        await salvarCronograma({
-                            config: newConfig,
-                            overrides: {},
-                            ferias: []
-                        });
+                    const ok = await criarNovoCalendarioLocal(
+                        newConfig.nome,
+                        newConfig.tipo,
+                        newConfig
+                    );
 
-                    setCloudId(novoId);
-                    setCurrentConfig(newConfig);
-                    setViewOnly(false);
-
-                    saveConfig(newConfig);
-                    saveOverrides({});
-                    saveFerias([]);
-
-                    const activeIdCriacao = getActiveCalendarId();
-
-                    if (activeIdCriacao) {
-                        registrarCalendario(activeIdCriacao, {
-                            name: newConfig.nome || '',
-                            type: newConfig.tipo
-                        });
+                    if (ok) {
+                        closeSettings();
+                        showToast('Calendário criado!');
                     }
-
-                    saveSyncedState({
-                        config: newConfig,
-                        overrides: {},
-                        ferias: []
-                    });
-
-                    // O cronograma acabou de ser criado e já está sincronizado.
-                    clearCalendarDirty();
-
-                    await salvarIndice(novoId, {
-                        nome: newConfig.nome || '(sem nome)',
-                        tipo: newConfig.tipo,
-                        atualizadoEm: Date.now()
-                    });
-
-                    updateHeader();
-                    updateViewOnlyBanner();
-                    closeSettings();
-                    render();
-                    showToast('Cronograma criado!');
-                } catch (e) {
-                    console.error('Erro ao criar cronograma:', e);
-                    showToast('Erro ao criar cronograma');
+                } finally {
+                    settingsSave.disabled = false;
                 }
 
                 return;

@@ -292,6 +292,25 @@
     </div>
   </div>
 
+    <!-- Modal Excluir Calendário -->
+  <div id="deleteCalendarOverlay" class="modal-overlay">
+    <div class="modal">
+      <button id="deleteCalendarClose" class="modal-close" type="button">&times;</button>
+      <h2>Excluir calendário</h2>
+
+      <p class="conflict-text">Você está excluindo <strong id="deleteCalendarName"></strong>.</p>
+      <p class="conflict-text" id="deleteCalendarWarning"></p>
+
+      <label for="deleteCalendarInput" id="deleteCalendarPrompt"></label>
+      <input type="text" id="deleteCalendarInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+
+      <div class="modal-actions">
+        <button id="deleteCalendarCancel" type="button" class="btn-ghost">Cancelar</button>
+        <button id="deleteCalendarConfirm" type="button" class="btn-save btn-danger" disabled>Excluir calendário</button>
+      </div>
+    </div>
+  </div>
+
   <!-- FIM MENUS -->
   <div id="toast" class="toast"></div>
 

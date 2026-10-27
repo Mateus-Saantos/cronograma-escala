@@ -22,6 +22,7 @@ import { createSettingsModule } from './settings.js';
 import { calculateScheduleDate } from './core/schedule.js';
 import { atualizarFaviconDoDia } from './utils/favicon.js';
 import { createCalendarDeleter } from './calendar-delete.js';
+import { createCalendarDeleteUI } from './calendar-delete-ui.js';
 import { showToast, openOverlay, closeOverlay } from './utils/dom.js';
 import { parseLocalDateKey, dateKey, isSameDay, daysBetween } from './core/dates.js';
 import { gerarFeriasId, getFeriasParaData, formatFeriasRange } from './core/vacations.js';
@@ -211,7 +212,19 @@ const calendarDeleter = createCalendarDeleter({
   onNoCalendars: showNoCalendarsState
 });
 
-window.__excluirCalendario = (id) => calendarDeleter.excluirCalendario(id); // TEMPORÁRIO: remover na Etapa 4
+const calendarDeleteUI = createCalendarDeleteUI({
+  excluirCalendario: calendarDeleter.excluirCalendario,
+  refreshCalendarsList: () => calendarsUI.renderMyCalendarsList()
+});
+
+function requestCalendarDeletion(calendario) {
+  if (state.isViewOnly) {
+    showToast('Saia do modo de visualização para excluir o calendário');
+    return;
+  }
+
+  calendarDeleteUI.openDeleteModal(calendario);
+}
 
 function updateHeader() {
   atualizarBotoesSemCalendario();
@@ -388,15 +401,15 @@ function showNoCalendarsState() {
 }
 
 window.switchToCalendar = switchToCalendar;
-window.__usarNuvem = () => loadCronogramaById(getCloudId(), true); // TEMPORÁRIO: remover na Etapa 5
-window.__checarNuvem = checarNuvem; // TEMPORÁRIO: remover na Etapa 5
 
-async function criarNovoCalendarioLocal(nome, tipo) {
+async function criarNovoCalendarioLocal(nome, tipo, configCompleta) {
   if (!cloudDisponivel()) {
     showToast('Sem conexão com o servidor — não é possível criar um calendário agora');
     return false;
   }
-  const config = Object.assign({}, DEFAULT_CONFIG, { tipo });
+
+  const config = configCompleta? { ...configCompleta } : Object.assign({}, DEFAULT_CONFIG, { tipo });
+
   let cloudId = null;
   try {
     cloudId = await salvarCronograma({
@@ -465,7 +478,8 @@ const settings = createSettingsModule({
   showToast,
   getMyCalendars: myCalendars,
   switchToCalendar,
-  loadCronogramaById
+  loadCronogramaById,
+  criarNovoCalendarioLocal
 });
 
 function initCalendarsModule() {
@@ -489,7 +503,9 @@ function initCalendarsModule() {
     switchToCalendar,
     carregarCalendarioPorPrompt: settings.carregarCalendarioPorPrompt,
     criarNovoCalendarioLocal,
-    showToast
+    showToast,
+    onDeleteRequest: requestCalendarDeletion,
+    onNewCalendarRequest: () => settings.openSettings('create')
   });
 }
 const calendarsUI = initCalendarsModule();

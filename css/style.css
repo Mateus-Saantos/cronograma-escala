@@ -926,6 +926,33 @@ body.no-calendar .empty-state {
   display: block;
 }
 
+/* Exclusão de calendário */
+.manager-item .btn-trash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: transparent;
+  color: #e5484d;
+  border: 1px solid rgba(229, 72, 77, 0.45);
+}
+
+.manager-item .btn-trash svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-save.btn-danger {
+  background: #e5484d;
+  border-color: #e5484d;
+  color: #ffffff;
+}
+
+.btn-save.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 @media (min-width: 1440px) {
   #calendar {
     margin-top: 23% !important;

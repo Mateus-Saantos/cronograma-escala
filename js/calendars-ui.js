@@ -19,10 +19,22 @@ const TIPO_LABELS = {
   'personalizada': 'Personalizada'
 };
 
+const TRASH_BUTTON_HTML = `
+  <button type="button" class="btn-trash" aria-label="Excluir calendário" title="Excluir calendário">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 6h18"/>
+      <path d="M8 6V4h8v2"/>
+      <path d="M19 6l-1 14H6L5 6"/>
+      <path d="M10 11v6"/>
+      <path d="M14 11v6"/>
+    </svg>
+  </button>`;
+
 export function renderMyCalendarsList({
   getMyCalendars,
   getActiveCalendarId,
   switchToCalendar,
+  onDeleteRequest,
   showToast,
   myCalendarsListContent,
   myCalendarsOverlay
@@ -50,7 +62,7 @@ export function renderMyCalendarsList({
         <span class="manager-item-name"></span>
         <span class="manager-item-meta"></span>
       </div>
-      ${isActive ? '' : '<button type="button">Selecionar</button>'}
+      ${isActive ? TRASH_BUTTON_HTML : '<button type="button">Selecionar</button>'}
     `;
 
     // Usa textContent para exibir os nomes como texto,
@@ -66,6 +78,12 @@ export function renderMyCalendarsList({
         switchToCalendar(cal.localId);
         closeOverlay(myCalendarsOverlay);
         showToast(`Agora em: ${cal.name || 'calendário'}`);
+      });
+    }
+
+    if (isActive && onDeleteRequest) {
+      row.querySelector('.btn-trash').addEventListener('click', () => {
+        onDeleteRequest(cal);
       });
     }
 
@@ -92,7 +110,9 @@ export function initCalendarsUI({
   switchToCalendar,
   carregarCalendarioPorPrompt,
   criarNovoCalendarioLocal,
-  showToast
+  showToast,
+  onDeleteRequest,
+  onNewCalendarRequest
 }) {
   const {
     myCalendarsOverlay,
@@ -113,6 +133,7 @@ export function initCalendarsUI({
     getActiveCalendarId,
     switchToCalendar,
     showToast,
+    onDeleteRequest,
     myCalendarsListContent,
     myCalendarsOverlay
   });
@@ -133,13 +154,10 @@ export function initCalendarsUI({
   });
 
   myCalendarsNewBtn.addEventListener('click', () => {
-    newCalendarName.value = '';
-    newCalendarType.value = '12x36';
-
     closeOverlay(myCalendarsOverlay);
-    openOverlay(newCalendarOverlay);
+    onNewCalendarRequest();
   });
-
+  
   myCalendarsLoadBtn.addEventListener('click', async () => {
     const ok = await carregarCalendarioPorPrompt();
 
